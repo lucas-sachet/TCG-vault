@@ -1,0 +1,219 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-slate-850: #1b202c;
+  --color-slate-755: #212837;
+  --color-slate-755: #212837;
+  --color-slate-750: #222938;
+  --color-slate-705: #2c3549;
+  --color-slate-550: #5c6b84;
+}
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem; /* 44px touch target compatibility */
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background-image: linear-gradient(to right, #3b4cca, #4f46e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+
+  &:hover {
+    background-image: linear-gradient(to right, #4f46e5, #6366f1);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(59, 76, 202, 0.25);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+@utility btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem; /* 44px minimum touch target compatibility */
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #cbd5e1;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+
+  &:hover {
+    background-color: #334155;
+    color: #ffffff;
+    border-color: #475569;
+  }
+}
+
+@utility btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem; /* 44px minimum touch target compatibility */
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background-color: #e11d48;
+  border: 1px solid #f43f5e;
+  border-radius: 0.75rem;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+
+  &:hover {
+    background-color: #be123c;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.3);
+  }
+}
+
+@utility card-collection {
+  background-color: #1a1d24;
+  border: 1px solid #1e293b;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    border-color: #334155;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@utility card-stat {
+  background-image: linear-gradient(to bottom right, #1e222b, #16181f);
+  border: 1px solid #1e293b;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+@utility title-page {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem; /* text-2xl */
+  letter-spacing: -0.025em; /* tracking-tight */
+  color: #ffffff;
+}
+
+@utility title-section {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.125rem; /* text-lg */
+  letter-spacing: -0.015em;
+  color: #f1f5f9;
+}
+
+@utility label-sys {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.625rem; /* text-[10px] */
+  text-transform: uppercase;
+  letter-spacing: 0.05em; /* tracking-wider */
+  color: #94a3b8;
+}
+
+@utility text-helper {
+  font-size: 0.75rem; /* text-xs */
+  color: #94a3b8;
+  line-height: 1.25rem;
+}
+
+/* ==========================================================================
+   Premium PokéVault Custom Scrollbars (Universal Page & Containers)
+   ========================================================================== */
+
+/* Modern scrollbars for WebKit-based browsers (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 8px;           /* Slim vertical scrollbar width */
+  height: 8px;          /* Slim horizontal scrollbar height */
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0f15;  /* Deep dark void base matching app theme */
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #252a36;  /* Slate-gray default thumb */
+  border: 2.5px solid #0d0f15; /* Simulates padding/track-isolation offset */
+  border-radius: 8px;
+  min-height: 36px;     /* Ensure easy interaction even with long lists */
+  transition: background-color 300ms ease;
+}
+
+/* Accent highlight when hovering the scrollbar thumb with a cool Poké-Blue transition */
+::-webkit-scrollbar-thumb:hover {
+  background-color: #3b4cca; 
+}
+
+/* Yellow highlight on active focus or grab state */
+::-webkit-scrollbar-thumb:active {
+  background-color: #FFCB05;
+}
+
+/* Inside specific cards, modals, or components that should look extra polished or tight */
+.custom-scroll-thin::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scroll-thin::-webkit-scrollbar-track {
+  background: rgba(13, 15, 21, 0.4);
+}
+.custom-scroll-thin::-webkit-scrollbar-thumb {
+  background: #2c3549;
+  border: 1.5px solid #0d0f15;
+}
+.custom-scroll-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #FFCB05;
+}
+
+/* Standards-compliant scrollbar fallback styling for Firefox & CSS Standards UI */
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #252a36 #0d0f15;
+  }
+  
+  *:hover {
+    scrollbar-color: #3b4cca #0d0f15;
+  }
+  
+  *:active {
+    scrollbar-color: #FFCB05 #0d0f15;
+  }
+}
+

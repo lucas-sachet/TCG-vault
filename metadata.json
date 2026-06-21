@@ -1,0 +1,6 @@
+{
+  "name": "TCG Vault",
+  "description": "Modern mobile-first Trading Card Game (TCG) collection portfolio and investment tracker.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
