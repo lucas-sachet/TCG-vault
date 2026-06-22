@@ -637,6 +637,8 @@ export default function App() {
   const [session, setSession] = useState<any>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
+  const [shouldShowAuthModal, setShouldShowAuthModal] = useState<boolean>(false);
 
   useEffect(() => {
     let active = true;
@@ -661,6 +663,29 @@ export default function App() {
     };
   }, []);
 
+  // Listen for navigation popstate events
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigate = (to: string) => {
+    window.history.pushState({}, '', to);
+    setCurrentPath(to);
+  };
+
+  // Redirect unauthenticated users navigating to /app back to /
+  useEffect(() => {
+    if (!userEmail && currentPath === '/app') {
+      window.history.replaceState({}, '', '/');
+      setCurrentPath('/');
+      setShouldShowAuthModal(true);
+    }
+  }, [userEmail, currentPath]);
+
   // Sync caches when userEmail / session is set
   useEffect(() => {
     if (userEmail && session?.user?.id) {
@@ -676,6 +701,7 @@ export default function App() {
 
   const handleSignOut = () => {
     supabase.auth.signOut();
+    navigate('/');
   };
 
   const handleDeleteAccount = async () => {
@@ -687,32 +713,46 @@ export default function App() {
       }
     }
     supabase.auth.signOut();
+    navigate('/');
   };
 
-  if (!userEmail) {
+  const showApp = currentPath === '/app';
+
+  if (showApp) {
+    if (!userEmail) {
+      return null;
+    }
+
+    if (!isDataLoaded) {
+      return (
+        <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col items-center justify-center gap-4">
+          <div className="w-10 h-10 border-4 border-t-indigo-500 border-indigo-900/30 rounded-full animate-spin"></div>
+          <div className="text-sm font-mono text-slate-400">Securely decrypting vault profile...</div>
+        </div>
+      );
+    }
+
     return (
-      <LandingPage 
-        onAuthSuccess={(email) => {
-          setUserEmail(email);
-        }} 
+      <MainVaultApp
+        userEmail={userEmail}
+        handleSignOut={handleSignOut}
+        handleDeleteAccount={handleDeleteAccount}
       />
     );
   }
 
-  if (!isDataLoaded) {
-    return (
-      <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-4 border-t-indigo-500 border-indigo-900/30 rounded-full animate-spin"></div>
-        <div className="text-sm font-mono text-slate-400">Securely decrypting vault profile...</div>
-      </div>
-    );
-  }
-
+  // Otherwise, render LandingPage for all marketing routes (/, /about, /privacy, /features, /binders)
   return (
-    <MainVaultApp
+    <LandingPage 
+      onAuthSuccess={(email) => {
+        setUserEmail(email);
+        navigate('/app');
+      }}
+      currentPath={currentPath}
+      navigate={navigate}
+      initialShowAuthModal={shouldShowAuthModal}
+      clearInitialShowAuthModal={() => setShouldShowAuthModal(false)}
       userEmail={userEmail}
-      handleSignOut={handleSignOut}
-      handleDeleteAccount={handleDeleteAccount}
     />
   );
 }
