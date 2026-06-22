@@ -4,15 +4,15 @@
  */
 
 import { ICardService, IHoldingService, IWishlistService, IBinderService, IPriceService, IGoalService, ISettingsService } from './interfaces';
-import { LocalStorageCardService } from './cards.service';
-import { LocalStorageHoldingService } from './collection.service';
-import { LocalStorageWishlistService } from './wishlist.service';
-import { LocalStorageBinderService } from './binder.service';
-import { LocalStoragePriceService } from './priceHistory.service';
-import { 
-  LocalStorageGoalService, 
-  LocalStorageSettingsService 
-} from './localStorageService';
+import {
+  supabaseCardService,
+  supabaseHoldingService,
+  supabaseWishlistService,
+  supabaseBinderService,
+  supabasePriceService,
+  supabaseGoalService,
+  supabaseSettingsService
+} from './supabase.service';
 
 class ServiceProvider {
   public cards: ICardService;
@@ -25,15 +25,16 @@ class ServiceProvider {
 
   constructor() {
     // Centrally swap implementations here for future PostgreSQL, Supabase, or REST APIs migrations
-    this.cards = new LocalStorageCardService();
-    this.holdings = new LocalStorageHoldingService();
-    this.wishlist = new LocalStorageWishlistService();
-    this.binders = new LocalStorageBinderService();
-    this.prices = new LocalStoragePriceService();
-    this.goals = new LocalStorageGoalService();
-    this.settings = new LocalStorageSettingsService();
+    this.cards = supabaseCardService;
+    this.holdings = supabaseHoldingService;
+    this.wishlist = supabaseWishlistService;
+    this.binders = supabaseBinderService;
+    this.prices = supabasePriceService;
+    this.goals = supabaseGoalService;
+    this.settings = supabaseSettingsService;
   }
 }
 
 export const services = new ServiceProvider();
 export type { ICardService, IHoldingService, IWishlistService, IBinderService, IPriceService, IGoalService, ISettingsService };
+

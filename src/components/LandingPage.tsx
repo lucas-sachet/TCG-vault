@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../services/supabaseClient';
 import { 
   Sparkles, 
   TrendingUp, 
@@ -82,10 +83,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onAuthSuccess }) => {
         setAuthError('Passwords must match exactly.');
         return;
       }
-      localStorage.setItem(`pokevault_displayName_${email}`, name.trim());
-      if (nickname.trim()) {
-        localStorage.setItem(`pokevault_nickname_${email}`, nickname.trim());
-      }
+      
+      setIsAuthLoading(true);
+      supabase.auth.signUp({
+        email: email.trim(),
+        password: password,
+        options: {
+          data: {
+            display_name: name.trim(),
+            nickname: nickname.trim() || undefined
+          }
+        }
+      }).then(({ data, error }) => {
+        setIsAuthLoading(false);
+        if (error) {
+          setAuthError(error.message);
+        } else if (data?.user?.email) {
+          onAuthSuccess(data.user.email);
+        }
+      }).catch(err => {
+        setIsAuthLoading(false);
+        setAuthError(err.message || 'An unexpected error occurred.');
+      });
+      return;
     }
 
     if (authMode === 'forgot') {
@@ -94,28 +114,52 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onAuthSuccess }) => {
         return;
       }
       setIsAuthLoading(true);
-      setTimeout(() => {
+      supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin
+      }).then(({ error }) => {
         setIsAuthLoading(false);
-        setRecoverySuccess(true);
-      }, 1400);
+        if (error) {
+          setAuthError(error.message);
+        } else {
+          setRecoverySuccess(true);
+        }
+      }).catch(err => {
+        setIsAuthLoading(false);
+        setAuthError(err.message || 'An unexpected error occurred.');
+      });
       return;
     }
 
-    // Standard sign in or registration flow simulation
+    // Standard sign in
     setIsAuthLoading(true);
-    setTimeout(() => {
+    supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password
+    }).then(({ data, error }) => {
       setIsAuthLoading(false);
-      onAuthSuccess(email);
-    }, 1500);
+      if (error) {
+        setAuthError(error.message);
+      } else if (data?.user?.email) {
+        onAuthSuccess(data.user.email);
+      }
+    }).catch(err => {
+      setIsAuthLoading(false);
+      setAuthError(err.message || 'An unexpected error occurred.');
+    });
   };
 
   const handleGoogleSignIn = () => {
     setAuthError(null);
     setIsGoogleLoading(true);
-    setTimeout(() => {
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    }).catch(err => {
       setIsGoogleLoading(false);
-      onAuthSuccess('collector.oak@gmail.com');
-    }, 1200);
+      setAuthError(err.message || 'Failed to initialize Google Sign In');
+    });
   };
 
   // Static high-quality example portfolio data for showcase

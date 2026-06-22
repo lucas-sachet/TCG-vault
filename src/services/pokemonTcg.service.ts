@@ -22,7 +22,17 @@ export interface TcgApiCard {
     printedTotal?: number;
     total?: number;
   };
+  tcgplayer?: {
+    prices?: {
+      normal?: { market?: number; mid?: number };
+      holofoil?: { market?: number; mid?: number };
+      reverseHolofoil?: { market?: number; mid?: number };
+      '1stEditionHolofoil'?: { market?: number; mid?: number };
+    };
+  };
 }
+
+import { services } from './serviceProvider';
 
 export async function searchPokemonCards(filters: {
   name?: string;
@@ -67,7 +77,7 @@ export async function searchPokemonCards(filters: {
     const json = await response.json();
     const data: TcgApiCard[] = json.data || [];
     
-    return data.map((item): Card => {
+    const results = data.map((item): Card => {
       const numPercent = item.set?.printedTotal ? `/${item.set.printedTotal}` : '';
       return {
         id: item.id,
@@ -81,8 +91,31 @@ export async function searchPokemonCards(filters: {
         subtypes: item.subtypes
       };
     });
+
+    const pricesToSave: Record<string, number> = {};
+    data.forEach((item) => {
+      const priceVal = item.tcgplayer?.prices?.normal?.market 
+        || item.tcgplayer?.prices?.holofoil?.market
+        || item.tcgplayer?.prices?.reverseHolofoil?.market
+        || item.tcgplayer?.prices?.normal?.mid
+        || item.tcgplayer?.prices?.holofoil?.mid
+        || 0;
+      
+      if (priceVal > 0) {
+        pricesToSave[item.id] = priceVal;
+      }
+    });
+
+    if (Object.keys(pricesToSave).length > 0) {
+      const currentPrices = services.prices.getMarketPrices();
+      const updatedPrices = { ...currentPrices, ...pricesToSave };
+      services.prices.saveMarketPrices(updatedPrices);
+    }
+
+    return results;
   } catch (error) {
     console.error('Error searching Pokemon TCG API:', error);
     throw error;
   }
 }
+

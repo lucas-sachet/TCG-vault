@@ -48,4 +48,21 @@ export class LocalStorageSettingsService implements ISettingsService {
   setPreferSpecimenPhoto(value: boolean): void {
     localStorage.setItem('preferSpecimenPhoto', String(value));
   }
+
+  getOnboarded(): boolean {
+    return localStorage.getItem('onboarded') === 'true';
+  }
+
+  setOnboarded(value: boolean): void {
+    localStorage.setItem('onboarded', String(value));
+  }
+
+  getLanguages(): string[] {
+    const saved = localStorage.getItem('languages');
+    return saved ? JSON.parse(saved) : [];
+  }
+
+  setLanguages(value: string[]): void {
+    localStorage.setItem('languages', JSON.stringify(value));
+  }
 }

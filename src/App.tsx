@@ -20,14 +20,6 @@ import {
 } from 'lucide-react';
 
 import { Card, CollectionItem, CardQuality, WishlistItem, PriceSnapshot, Binder, PriceNotification, CollectionGoal } from './types';
-import { 
-  POKEMON_CARDS, 
-  CURRENT_MARKET_PRICES, 
-  INITIAL_COLLECTION_ITEMS, 
-  INITIAL_WISHLIST_ITEMS, 
-  INITIAL_BINDERS, 
-  CARD_PRICE_HISTORIES 
-} from './data/pokemonData';
 
 import { BottomNav, TabId } from './components/BottomNav';
 import { DashboardTab } from './components/DashboardTab';
@@ -43,6 +35,10 @@ import { LandingPage } from './components/LandingPage';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { services } from './services/serviceProvider';
 
+// Supabase client and sync services
+import { supabase } from './services/supabaseClient';
+import { syncFromSupabase, clearSupabaseCache } from './services/supabase.service';
+
 // Custom State & Data Hooks
 import { useCollection } from './hooks/useCollection';
 import { useHoldings } from './hooks/useHoldings';
@@ -50,30 +46,13 @@ import { useWishlist } from './hooks/useWishlist';
 import { usePortfolio } from './hooks/usePortfolio';
 import { useAnalytics } from './hooks/useAnalytics';
 
-export default function App() {
-  // Authentication coordinates
-  const [userEmail, setUserEmail] = useState<string | null>(() => {
-    return localStorage.getItem('pokevault_session_user') || null;
-  });
+interface MainVaultAppProps {
+  userEmail: string;
+  handleSignOut: () => void;
+  handleDeleteAccount: () => void;
+}
 
-  const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
-    const currentEmail = localStorage.getItem('pokevault_session_user');
-    return !!currentEmail && localStorage.getItem(`pokevault_onboarded_${currentEmail}`) === 'true';
-  });
-
-  useEffect(() => {
-    if (userEmail) {
-      setIsOnboarded(localStorage.getItem(`pokevault_onboarded_${userEmail}`) === 'true');
-    } else {
-      setIsOnboarded(false);
-    }
-  }, [userEmail]);
-
-  const handleSignOut = () => {
-    setUserEmail(null);
-    localStorage.removeItem('pokevault_session_user');
-  };
-
+function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVaultAppProps) {
   // Decentralized State Hooks
   const { 
     cards, 
@@ -98,21 +77,6 @@ export default function App() {
   } = useHoldings();
 
   const {
-    marketPrices,
-    priceHistories,
-    priceNotifications,
-    priceAlerts,
-    isSyncing,
-    addMarketPrice,
-    importMarketPricesAndHistories,
-    updatePriceAlert,
-    markNotificationRead,
-    syncMarketPrices,
-    resetPortfolio,
-    activeUnreadNotifsCount
-  } = usePortfolio();
-
-  const {
     wishlistItems,
     addWishlistItem,
     deleteWishlistItem,
@@ -120,7 +84,7 @@ export default function App() {
     resetWishlist
   } = useWishlist({ 
     cards, 
-    marketPrices, 
+    marketPrices: services.prices.getMarketPrices(), 
     onAcquire: (cardId, purchasePrice, purchaseDate, gradeType, gradeValue, certNumber) => {
       addHolding({
         id: `own-item-${Date.now()}`,
@@ -137,10 +101,27 @@ export default function App() {
   });
 
   const {
+    marketPrices,
+    priceHistories,
+    priceNotifications,
+    priceAlerts,
+    isSyncing,
+    addMarketPrice,
+    importMarketPricesAndHistories,
+    updatePriceAlert,
+    markNotificationRead,
+    syncMarketPrices,
+    resetPortfolio,
+    activeUnreadNotifsCount
+  } = usePortfolio();
+
+  const {
     goals,
     addGoal,
     deleteGoal
   } = useAnalytics();
+
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(() => services.settings.getOnboarded());
 
   // UI state
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
@@ -292,44 +273,11 @@ export default function App() {
     markNotificationRead(notifId);
   };
 
-  const handleDeleteAccount = () => {
-    localStorage.removeItem(`pokevault_onboarded_${userEmail}`);
-    localStorage.removeItem(`pokevault_languages_${userEmail}`);
-    localStorage.removeItem(`pokevault_goals_${userEmail}`);
-    localStorage.removeItem(`pokevault_displayName_${userEmail}`);
-    localStorage.removeItem(`pokevault_country_${userEmail}`);
-    localStorage.removeItem(`pokevault_aboutMe_${userEmail}`);
-    localStorage.removeItem(`pokevault_profilePic_${userEmail}`);
-    localStorage.removeItem(`pokevault_collectorSince_${userEmail}`);
-    localStorage.removeItem(`pokevault_collectorProfile_${userEmail}`);
-    localStorage.removeItem(`pokevault_showPurchasePrices_${userEmail}`);
-    localStorage.removeItem(`pokevault_showROI_${userEmail}`);
-    localStorage.removeItem(`pokevault_showCollectionValue_${userEmail}`);
-    localStorage.removeItem(`pokevault_defaultBinder_${userEmail}`);
-
-    resetHoldings('empty');
-    resetWishlist('empty');
-
-    setUserEmail(null);
-    localStorage.removeItem('pokevault_session_user');
-  };
-
-  if (!userEmail) {
-    return (
-      <LandingPage 
-        onAuthSuccess={(email) => {
-          setUserEmail(email);
-          localStorage.setItem('pokevault_session_user', email);
-        }} 
-      />
-    );
-  }
-
   if (!isOnboarded) {
     return (
       <OnboardingWizard
         userEmail={userEmail}
-        onComplete={(collectionName, selectedLanguages, selectedGoals) => {
+        onComplete={async (collectionName, selectedLanguages, selectedGoals) => {
           // Establish primary vault custom binder
           const cleanName = collectionName.trim() || 'My Collection';
           const newBinderId = addBinder(cleanName, `Primary binder established during onboarding setup.`);
@@ -338,18 +286,24 @@ export default function App() {
           setSelectedBinderId(newBinderId);
 
           // Save selected preferences
-          localStorage.setItem(`pokevault_languages_${userEmail}`, JSON.stringify(selectedLanguages));
-          localStorage.setItem(`pokevault_goals_${userEmail}`, JSON.stringify(selectedGoals));
+          services.settings.setLanguages(selectedLanguages);
+          services.settings.setOnboarded(true);
 
-          // Set collection as empty for pristine new space simulation
+          // Establish primary goals
+          const newGoals: CollectionGoal[] = selectedGoals.map((g, idx) => ({
+            id: `goal-${Date.now()}-${idx}`,
+            name: g === 'pokemon' ? 'Pikachu Collector' : g === 'set' ? 'Complete 151 Classic' : 'Reach Value Milestone',
+            type: g as any,
+            targetValue: g === 'pokemon' ? 'Pikachu' : g === 'set' ? '151 Classic Collection (Kanto)' : '1000',
+            createdAt: new Date().toISOString()
+          }));
+          await services.goals.saveGoals(newGoals);
+
+          // Set collection as empty for pristine new space
           resetCollection('empty');
           resetHoldings('empty');
 
-          // Save onboard status
-          localStorage.setItem(`pokevault_onboarded_${userEmail}`, 'true');
           setIsOnboarded(true);
-
-          // Focus on primary tab
           setActiveTab('dashboard');
         }}
       />
@@ -676,5 +630,89 @@ export default function App() {
       />
 
     </div>
+  );
+}
+
+export default function App() {
+  const [session, setSession] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+
+  useEffect(() => {
+    let active = true;
+
+    // Retrieve active session initially
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return;
+      setSession(session);
+      setUserEmail(session?.user?.email || null);
+    });
+
+    // Monitor auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setSession(session);
+      setUserEmail(session?.user?.email || null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Sync caches when userEmail / session is set
+  useEffect(() => {
+    if (userEmail && session?.user?.id) {
+      setIsDataLoaded(false);
+      syncFromSupabase(session.user.id, userEmail).then(() => {
+        setIsDataLoaded(true);
+      });
+    } else {
+      setIsDataLoaded(true);
+      clearSupabaseCache(userEmail || undefined);
+    }
+  }, [userEmail, session]);
+
+  const handleSignOut = () => {
+    supabase.auth.signOut();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (session?.user?.id) {
+      try {
+        await supabase.from('profiles').delete().eq('id', session.user.id);
+      } catch (err) {
+        console.error('Error deleting account profile:', err);
+      }
+    }
+    supabase.auth.signOut();
+  };
+
+  if (!userEmail) {
+    return (
+      <LandingPage 
+        onAuthSuccess={(email) => {
+          setUserEmail(email);
+        }} 
+      />
+    );
+  }
+
+  if (!isDataLoaded) {
+    return (
+      <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-4 border-t-indigo-500 border-indigo-900/30 rounded-full animate-spin"></div>
+        <div className="text-sm font-mono text-slate-400">Securely decrypting vault profile...</div>
+      </div>
+    );
+  }
+
+  return (
+    <MainVaultApp
+      userEmail={userEmail}
+      handleSignOut={handleSignOut}
+      handleDeleteAccount={handleDeleteAccount}
+    />
   );
 }

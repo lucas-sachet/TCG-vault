@@ -47,4 +47,8 @@ export interface IGoalService {
 export interface ISettingsService {
   getPreferSpecimenPhoto(): boolean;
   setPreferSpecimenPhoto(value: boolean): void;
+  getOnboarded(): boolean;
+  setOnboarded(value: boolean): void;
+  getLanguages(): string[];
+  setLanguages(value: string[]): void;
 }

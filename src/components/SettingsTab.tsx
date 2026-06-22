@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ConfirmationModal } from './ConfirmationModal';
+import { supabase } from '../services/supabaseClient';
 import { 
   User, 
   Mail, 
@@ -227,6 +228,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         const base64 = event.target.result as string;
         setProfilePic(base64);
         localStorage.setItem(`pokevault_profilePic_${userEmail}`, base64);
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user?.id) {
+            supabase.from('profiles').update({ profile_pic: base64 }).eq('id', session.user.id).then();
+          }
+        });
         setSuccessBanner('Physical specimen artwork mapped successfully!');
       }
     };
@@ -247,17 +253,37 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setErrorBanner(null);
     setSuccessBanner(null);
 
-    setTimeout(() => {
-      localStorage.setItem(`pokevault_displayName_${userEmail}`, displayName.trim());
-      localStorage.setItem(`pokevault_nickname_${userEmail}`, nickname.trim());
-      localStorage.setItem(`pokevault_country_${userEmail}`, country);
-      localStorage.setItem(`pokevault_aboutMe_${userEmail}`, aboutMe.trim());
-      localStorage.setItem(`pokevault_collectorSince_${userEmail}`, collectorSince);
-      localStorage.setItem(`pokevault_profilePic_${userEmail}`, profilePic);
-      
-      setIsSavingProfile(false);
-      setSuccessBanner('Profile parameters updated securely inside local cache.');
-    }, 800);
+    // Save to Supabase
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        supabase.from('profiles').update({
+          display_name: displayName.trim(),
+          nickname: nickname.trim(),
+          country: country,
+          about_me: aboutMe.trim(),
+          collector_since: collectorSince,
+          profile_pic: profilePic
+        }).eq('id', session.user.id).then(({ error }) => {
+          if (error) {
+            setIsSavingProfile(false);
+            setErrorBanner(error.message || 'Failed to update profile in Supabase.');
+          } else {
+            localStorage.setItem(`pokevault_displayName_${userEmail}`, displayName.trim());
+            localStorage.setItem(`pokevault_nickname_${userEmail}`, nickname.trim());
+            localStorage.setItem(`pokevault_country_${userEmail}`, country);
+            localStorage.setItem(`pokevault_aboutMe_${userEmail}`, aboutMe.trim());
+            localStorage.setItem(`pokevault_collectorSince_${userEmail}`, collectorSince);
+            localStorage.setItem(`pokevault_profilePic_${userEmail}`, profilePic);
+            
+            setIsSavingProfile(false);
+            setSuccessBanner('Profile parameters updated securely inside Supabase.');
+          }
+        });
+      } else {
+        setIsSavingProfile(false);
+        setErrorBanner('No active session found.');
+      }
+    });
   };
 
   // -----------------------------------------------------
@@ -269,20 +295,35 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       return;
     }
 
-    localStorage.setItem(`pokevault_languages_${userEmail}`, JSON.stringify(selectedLanguages));
-    localStorage.setItem(`pokevault_defaultBinder_${userEmail}`, defaultCollectionId);
-    localStorage.setItem(`pokevault_showPurchasePrices_${userEmail}`, String(showPurchasePrices));
-    localStorage.setItem(`pokevault_showROI_${userEmail}`, String(showROI));
-    localStorage.setItem(`pokevault_showCollectionValue_${userEmail}`, String(showCollectionValue));
-    localStorage.setItem(`pokevault_collectorProfile_${userEmail}`, collectorProfile);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        supabase.from('profiles').update({
+          languages: selectedLanguages,
+          show_purchase_prices: showPurchasePrices,
+          show_roi: showROI,
+          show_collection_value: showCollectionValue,
+          collector_profile: collectorProfile
+        }).eq('id', session.user.id).then(({ error }) => {
+          if (error) {
+            setErrorBanner(error.message || 'Failed to update preferences in Supabase.');
+          } else {
+            localStorage.setItem(`pokevault_languages_${userEmail}`, JSON.stringify(selectedLanguages));
+            localStorage.setItem(`pokevault_defaultBinder_${userEmail}`, defaultCollectionId);
+            localStorage.setItem(`pokevault_showPurchasePrices_${userEmail}`, String(showPurchasePrices));
+            localStorage.setItem(`pokevault_showROI_${userEmail}`, String(showROI));
+            localStorage.setItem(`pokevault_showCollectionValue_${userEmail}`, String(showCollectionValue));
+            localStorage.setItem(`pokevault_collectorProfile_${userEmail}`, collectorProfile);
 
-    setErrorBanner(null);
-    setSuccessBanner('Personalization dashboard preferences saved successfully.');
-    
-    // Clear banner after delay
-    setTimeout(() => {
-      setSuccessBanner(null);
-    }, 4000);
+            setErrorBanner(null);
+            setSuccessBanner('Personalization dashboard preferences saved to Supabase.');
+            
+            setTimeout(() => {
+              setSuccessBanner(null);
+            }, 4000);
+          }
+        });
+      }
+    });
   };
 
   // -----------------------------------------------------
