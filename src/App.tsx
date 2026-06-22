@@ -199,6 +199,12 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
     addHolding(newItem);
   };
 
+  const handleBulkCardAdded = (newCards: Card[], newItems: CollectionItem[]) => {
+    importCards(newCards);
+    importHoldings(newItems);
+    importMarketPricesAndHistories(newItems);
+  };
+
   const handleDeleteCollectionItem = (itemId: string) => {
     deleteHolding(itemId);
   };
@@ -604,7 +610,9 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
         isOpen={isAddCardOpen}
         onClose={() => setIsAddCardOpen(false)}
         onCardAdded={handleCardAdded}
+        onBulkAdd={handleBulkCardAdded}
         binders={binders}
+        marketPrices={marketPrices}
       />
 
       {/* 2. Card details overlay sheet */}

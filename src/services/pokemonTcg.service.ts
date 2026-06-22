@@ -34,6 +34,76 @@ export interface TcgApiCard {
 
 import { services } from './serviceProvider';
 
+export async function searchPokemonCardsBySet(setName: string): Promise<Card[]> {
+  const cleanSet = setName.trim().replace(/[\"']/g, '');
+  if (!cleanSet) return [];
+
+  const allCards: Card[] = [];
+  let page = 1;
+  const pageSize = 250;
+  let totalCount = Infinity;
+
+  while (allCards.length < totalCount) {
+    const q = `set.name:"${cleanSet}"`;
+    const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=${pageSize}&page=${page}`;
+
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pokemon TCG API responded with status ${response.status}`);
+    }
+
+    const json = await response.json();
+    totalCount = json.totalCount || 0;
+    const data: TcgApiCard[] = json.data || [];
+
+    if (data.length === 0) break;
+
+    const pricesToSave: Record<string, number> = {};
+
+    const mapped = data.map((item): Card => {
+      const numPercent = item.set?.printedTotal ? `/${item.set.printedTotal}` : '';
+
+      const priceVal = item.tcgplayer?.prices?.normal?.market 
+        || item.tcgplayer?.prices?.holofoil?.market
+        || item.tcgplayer?.prices?.reverseHolofoil?.market
+        || item.tcgplayer?.prices?.normal?.mid
+        || item.tcgplayer?.prices?.holofoil?.mid
+        || 0;
+      
+      if (priceVal > 0) {
+        pricesToSave[item.id] = priceVal;
+      }
+
+      return {
+        id: item.id,
+        name: item.name,
+        set: item.set?.name || 'Unknown Set',
+        number: `${item.number}${numPercent}`,
+        rarity: item.rarity || 'Uncommon',
+        language: 'EN',
+        imageUrl: item.images?.large || item.images?.small || 'https://images.pokemontcg.io/sv3/223_hires.png',
+        supertype: item.supertype,
+        subtypes: item.subtypes
+      };
+    });
+
+    allCards.push(...mapped);
+
+    if (Object.keys(pricesToSave).length > 0) {
+      const currentPrices = services.prices.getMarketPrices();
+      const updatedPrices = { ...currentPrices, ...pricesToSave };
+      services.prices.saveMarketPrices(updatedPrices);
+    }
+
+    page++;
+  }
+
+  return allCards;
+}
+
 export async function searchPokemonCards(filters: {
   name?: string;
   set?: string;
