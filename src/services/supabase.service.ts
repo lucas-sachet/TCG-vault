@@ -568,26 +568,7 @@ export async function syncFromSupabase(userId: string, userEmail: string): Promi
       })));
     }
 
-    // 3. Fetch Cards
-    const { data: cards } = await supabase
-      .from('cards')
-      .select('*');
-
-    if (cards) {
-      supabaseCardService.setCards(cards.map(c => ({
-        id: c.id,
-        name: c.name,
-        set: c.set,
-        number: c.number,
-        rarity: c.rarity,
-        language: c.language as any,
-        imageUrl: c.image_url,
-        supertype: c.supertype || undefined,
-        subtypes: c.subtypes || undefined
-      })));
-    }
-
-    // 4. Fetch Collection Items
+    // 3. Fetch Collection Items
     const { data: holdings } = await supabase
       .from('collection_items')
       .select('*')
@@ -612,7 +593,7 @@ export async function syncFromSupabase(userId: string, userEmail: string): Promi
       })));
     }
 
-    // 5. Fetch Wishlist Items
+    // 4. Fetch Wishlist Items
     const { data: wishlist } = await supabase
       .from('wishlist_items')
       .select('*')
@@ -630,7 +611,7 @@ export async function syncFromSupabase(userId: string, userEmail: string): Promi
       })));
     }
 
-    // 6. Fetch Goals
+    // 5. Fetch Goals
     const { data: goals } = await supabase
       .from('goals')
       .select('*')
@@ -646,7 +627,7 @@ export async function syncFromSupabase(userId: string, userEmail: string): Promi
       })));
     }
 
-    // 7. Fetch Price Notifications
+    // 6. Fetch Price Notifications
     const { data: notifications } = await supabase
       .from('price_notifications')
       .select('*')
@@ -666,7 +647,7 @@ export async function syncFromSupabase(userId: string, userEmail: string): Promi
       })));
     }
 
-    // 8. Fetch Price Alerts
+    // 7. Fetch Price Alerts
     const { data: alerts } = await supabase
       .from('price_alerts')
       .select('*')
@@ -683,37 +664,100 @@ export async function syncFromSupabase(userId: string, userEmail: string): Promi
       supabasePriceService.setPriceAlerts(mappedAlerts);
     }
 
-    // 9. Fetch Market Prices
-    const { data: marketPrices } = await supabase
-      .from('market_prices')
-      .select('*');
+    // ─── Collect Card IDs for Optimized Caching ───
+    const cardIds = new Set<string>();
 
-    if (marketPrices) {
-      const mappedPrices: Record<string, number> = {};
-      marketPrices.forEach(mp => {
-        mappedPrices[mp.card_id] = Number(mp.price);
+    if (binders) {
+      binders.forEach(b => {
+        if (b.cover_card_id) cardIds.add(b.cover_card_id);
       });
-      supabasePriceService.setMarketPrices(mappedPrices);
+    }
+    if (holdings) {
+      holdings.forEach(h => {
+        if (h.card_id) cardIds.add(h.card_id);
+      });
+    }
+    if (wishlist) {
+      wishlist.forEach(w => {
+        if (w.card_id) cardIds.add(w.card_id);
+      });
+    }
+    if (notifications) {
+      notifications.forEach(n => {
+        if (n.card_id) cardIds.add(n.card_id);
+      });
+    }
+    if (alerts) {
+      alerts.forEach(a => {
+        if (a.card_id) cardIds.add(a.card_id);
+      });
     }
 
-    // 10. Fetch Price Histories
-    const { data: histories } = await supabase
-      .from('price_history')
-      .select('*');
+    // 8. Fetch Cards (Filtered)
+    if (cardIds.size > 0) {
+      const { data: cards } = await supabase
+        .from('cards')
+        .select('*')
+        .in('id', Array.from(cardIds));
 
-    if (histories) {
-      const mappedHistories: Record<string, PriceSnapshot[]> = {};
-      histories.forEach(h => {
-        if (!mappedHistories[h.card_id]) {
-          mappedHistories[h.card_id] = [];
-        }
-        mappedHistories[h.card_id].push({
-          cardId: h.card_id,
-          marketPrice: Number(h.market_price),
-          capturedAt: h.captured_at
+      if (cards) {
+        supabaseCardService.setCards(cards.map(c => ({
+          id: c.id,
+          name: c.name,
+          set: c.set,
+          number: c.number,
+          rarity: c.rarity,
+          language: c.language as any,
+          imageUrl: c.image_url,
+          supertype: c.supertype || undefined,
+          subtypes: c.subtypes || undefined
+        })));
+      }
+    } else {
+      supabaseCardService.setCards([]);
+    }
+
+    // 9. Fetch Market Prices (Filtered)
+    if (cardIds.size > 0) {
+      const { data: marketPrices } = await supabase
+        .from('market_prices')
+        .select('*')
+        .in('card_id', Array.from(cardIds));
+
+      if (marketPrices) {
+        const mappedPrices: Record<string, number> = {};
+        marketPrices.forEach(mp => {
+          mappedPrices[mp.card_id] = Number(mp.price);
         });
-      });
-      supabasePriceService.setPriceHistories(mappedHistories);
+        supabasePriceService.setMarketPrices(mappedPrices);
+      }
+    } else {
+      supabasePriceService.setMarketPrices({});
+    }
+
+    // 10. Fetch Price Histories (Filtered)
+    if (cardIds.size > 0) {
+      const { data: histories } = await supabase
+        .from('price_history')
+        .select('*')
+        .in('card_id', Array.from(cardIds));
+
+      if (histories) {
+        const mappedHistories: Record<string, PriceSnapshot[]> = {};
+        histories.forEach(h => {
+          if (!mappedHistories[h.card_id]) {
+            mappedHistories[h.card_id] = [];
+          }
+          mappedHistories[h.card_id].push({
+            cardId: h.card_id,
+            marketPrice: Number(h.market_price),
+            capturedAt: h.captured_at
+          });
+        });
+        supabasePriceService.setPriceHistories(mappedHistories);
+      }
+    } else {
+      supabasePriceService.setPriceHistories({});
     }
   } catch (err) {
     console.error('Error synchronizing from Supabase:', err);

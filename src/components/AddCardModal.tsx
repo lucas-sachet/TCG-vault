@@ -9,6 +9,9 @@ import { X, Sparkles, AlertCircle, Info, Calendar, DollarSign, Check, Camera, Se
 import { Card, CollectionItem, CardQuality } from '../types';
 import { LANGUAGE_METADATA } from '../data/pokemonData';
 import { searchPokemonCards, searchPokemonCardsBySet } from '../services/pokemonTcg.service';
+import { supabase } from '../services/supabaseClient';
+import { uploadImageIfBase64 } from '../services/imageUpload.service';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 /* ── Personal Photo Uploader (unchanged from original) ────────────── */
 
@@ -186,6 +189,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   const [certNumber, setCertNumber] = useState('');
   const [frontPhotoUrl, setFrontPhotoUrl] = useState('');
   const [backPhotoUrl, setBackPhotoUrl] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // ─── Bulk mode state ───
   const [bulkSelectedCards, setBulkSelectedCards] = useState<Card[]>([]);
@@ -291,42 +295,64 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   };
 
   // ─── Individual submit ───
-  const handleFormSubmission = () => {
+  const handleFormSubmission = async () => {
     if (!selectedCatalogCard) {
       setValidationError('Please select a card from the search results first.');
       return;
     }
     setValidationError(null);
+    setIsSaving(true);
 
-    const collectionItem: CollectionItem = {
-      id: `own-item-${Date.now()}`,
-      cardId: selectedCatalogCard.id,
-      purchaseDate: purchaseDate,
-      purchasePrice: Number(purchasePrice) || 0,
-      currency: 'USD',
-      quantity: Math.max(1, Number(quantity) || 1),
-      notes: itemNotes.trim() || undefined,
-      gradeType: gradeType,
-      gradeValue: gradeType === 'Raw' ? 'Raw' : (isNaN(Number(gradeValue)) ? gradeValue : Number(gradeValue)),
-      certNumber: certNumber.trim() || undefined,
-      binderId: selectedBinderId === 'binder-all' ? undefined : selectedBinderId,
-      quality: quality,
-      frontPhotoUrl: frontPhotoUrl.trim() || undefined,
-      backPhotoUrl: backPhotoUrl.trim() || undefined
-    };
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || 'anonymous';
 
-    onCardAdded(selectedCatalogCard, collectionItem);
-    
-    // Clear state
-    setSelectedCatalogCard(null);
-    setApiResults([]);
-    setSearchQuery('');
-    setItemNotes('');
-    setCertNumber('');
-    setQuality('NM');
-    setFrontPhotoUrl('');
-    setBackPhotoUrl('');
-    onClose();
+      // Upload photos to storage bucket if they are base64
+      let uploadedFrontUrl = frontPhotoUrl;
+      let uploadedBackUrl = backPhotoUrl;
+
+      if (frontPhotoUrl) {
+        uploadedFrontUrl = await uploadImageIfBase64(frontPhotoUrl, userId, `front-${selectedCatalogCard.id}`);
+      }
+      if (backPhotoUrl) {
+        uploadedBackUrl = await uploadImageIfBase64(backPhotoUrl, userId, `back-${selectedCatalogCard.id}`);
+      }
+
+      const collectionItem: CollectionItem = {
+        id: `own-item-${Date.now()}`,
+        cardId: selectedCatalogCard.id,
+        purchaseDate: purchaseDate,
+        purchasePrice: Number(purchasePrice) || 0,
+        currency: 'USD',
+        quantity: Math.max(1, Number(quantity) || 1),
+        notes: itemNotes.trim() || undefined,
+        gradeType: gradeType,
+        gradeValue: gradeType === 'Raw' ? 'Raw' : (isNaN(Number(gradeValue)) ? gradeValue : Number(gradeValue)),
+        certNumber: certNumber.trim() || undefined,
+        binderId: selectedBinderId === 'binder-all' ? undefined : selectedBinderId,
+        quality: quality,
+        frontPhotoUrl: uploadedFrontUrl.trim() || undefined,
+        backPhotoUrl: uploadedBackUrl.trim() || undefined
+      };
+
+      onCardAdded(selectedCatalogCard, collectionItem);
+      
+      // Clear state
+      setSelectedCatalogCard(null);
+      setApiResults([]);
+      setSearchQuery('');
+      setItemNotes('');
+      setCertNumber('');
+      setQuality('NM');
+      setFrontPhotoUrl('');
+      setBackPhotoUrl('');
+      onClose();
+    } catch (error: any) {
+      console.error('Error submitting collectible:', error);
+      setValidationError(error.message || 'Failed to upload photos. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ─── Bulk submit ───
@@ -476,7 +502,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                 )}
               </div>
               <img 
-                src={card.imageUrl} 
+                src={getOptimizedImageUrl(card.imageUrl, 100)} 
                 alt={card.name} 
                 referrerPolicy="no-referrer"
                 className="w-8 h-11 object-contain bg-black/40 border border-slate-800 shrink-0 rounded"
@@ -526,7 +552,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
               className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg px-2 py-1 group"
             >
               <img 
-                src={card.imageUrl} 
+                src={getOptimizedImageUrl(card.imageUrl, 50)} 
                 alt={card.name}
                 referrerPolicy="no-referrer"
                 className="w-4 h-5 object-contain rounded-sm"
@@ -644,7 +670,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                       <div className="flex items-center justify-between p-3 bg-slate-900/60 rounded-2xl border border-blue-500/40 shadow-lg shadow-blue-900/5 animate-fade-in">
                         <div className="flex items-center gap-3">
                           <img 
-                            src={selectedCatalogCard.imageUrl} 
+                            src={getOptimizedImageUrl(selectedCatalogCard.imageUrl, 150)} 
                             alt={selectedCatalogCard.name} 
                             referrerPolicy="no-referrer"
                             className="w-12 h-16 object-contain rounded bg-black/40 border border-slate-800"
@@ -682,7 +708,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                                 className="w-full flex items-center justify-start gap-2.5 p-2 bg-slate-900/50 border border-slate-850 rounded-xl hover:border-blue-500/50 hover:bg-slate-850/60 text-left transition-all group cursor-pointer"
                               >
                                 <img 
-                                  src={card.imageUrl} 
+                                  src={getOptimizedImageUrl(card.imageUrl, 100)} 
                                   alt={card.name} 
                                   referrerPolicy="no-referrer"
                                   className="w-9 h-12 object-contain bg-black/40 border border-slate-800 shrink-0 rounded"
@@ -1124,10 +1150,17 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                   id="modal-submit-add-btn"
                   type="button"
                   onClick={handleFormSubmission}
-                  disabled={!selectedCatalogCard}
-                  className="btn-primary flex-1 text-xs select-none disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer"
+                  disabled={!selectedCatalogCard || isSaving}
+                  className="btn-primary flex-1 text-xs select-none disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Vault Card Now
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Vault Card Now</span>
+                  )}
                 </button>
               ) : (
                 <button

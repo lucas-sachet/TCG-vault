@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Card, WishlistItem } from '../types';
 import { POKEMON_CARDS, LANGUAGE_METADATA } from '../data/pokemonData';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface WishlistTabProps {
   cards: Card[];
@@ -266,7 +267,7 @@ export const WishlistTab: React.FC<WishlistTabProps> = ({
                     className="w-16 h-22 object-contain rounded bg-slate-950 border border-slate-800 cursor-pointer overflow-hidden relative group shrink-0 flex items-center justify-center p-1"
                   >
                     <img 
-                      src={card.imageUrl} 
+                      src={getOptimizedImageUrl(card.imageUrl, 150)} 
                       alt={card.name} 
                       className="w-full h-full object-contain hover:scale-105 transition-transform"
                     />

@@ -28,11 +28,15 @@ import {
   Award,
   Activity,
   Plus,
-  Camera
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { Card, CollectionItem, WishlistItem, PriceSnapshot, Binder, CardQuality } from '../types';
 import { LANGUAGE_METADATA, QUALITY_METADATA } from '../data/pokemonData';
 import { services } from '../services/serviceProvider';
+import { supabase } from '../services/supabaseClient';
+import { uploadImageIfBase64 } from '../services/imageUpload.service';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface CardDetailsModalProps {
   isOpen: boolean;
@@ -88,6 +92,8 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
   const [photoFront, setPhotoFront] = useState(holding.frontPhotoUrl || '');
   const [photoBack, setPhotoBack] = useState(holding.backPhotoUrl || '');
   const [isEditingPhotos, setIsEditingPhotos] = useState(false);
+  const [isUploadingFront, setIsUploadingFront] = useState(false);
+  const [isUploadingBack, setIsUploadingBack] = useState(false);
 
   // Sync state if holding photo URLs change externally
   React.useEffect(() => {
@@ -100,6 +106,64 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
     setPhotoBack(back);
     if (onUpdatePhotos) {
       onUpdatePhotos(holding.id, front || undefined, back || undefined);
+    }
+  };
+
+  const handleFrontPhotoFileChange = async (file: File) => {
+    setIsUploadingFront(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || 'anonymous';
+      
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const base64 = ev.target?.result as string;
+          const publicUrl = await uploadImageIfBase64(base64, userId, `front-${holding.id}`);
+          setPhotoFront(publicUrl);
+          if (onUpdatePhotos) {
+            onUpdatePhotos(holding.id, publicUrl || undefined, photoBack || undefined);
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to upload image. Please try again.');
+        } finally {
+          setIsUploadingFront(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setIsUploadingFront(false);
+    }
+  };
+
+  const handleBackPhotoFileChange = async (file: File) => {
+    setIsUploadingBack(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || 'anonymous';
+      
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const base64 = ev.target?.result as string;
+          const publicUrl = await uploadImageIfBase64(base64, userId, `back-${holding.id}`);
+          setPhotoBack(publicUrl);
+          if (onUpdatePhotos) {
+            onUpdatePhotos(holding.id, photoFront || undefined, publicUrl || undefined);
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to upload image. Please try again.');
+        } finally {
+          setIsUploadingBack(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setIsUploadingBack(false);
     }
   };
 
@@ -292,15 +356,19 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
                     id={`holding-front-file-${holding.id}`}
                     className="hidden"
                     accept="image/*"
+                    disabled={isUploadingFront}
                     onChange={(e) => {
                       if (e.target.files?.[0]) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => handleUpdateSpecimenPhotos(ev.target?.result as string, photoBack);
-                        reader.readAsDataURL(e.target.files[0]);
+                        handleFrontPhotoFileChange(e.target.files[0]);
                       }
                     }}
                   />
-                  {photoFront ? (
+                  {isUploadingFront ? (
+                    <div className="flex flex-col items-center justify-center gap-1.5">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#FFCB05]" />
+                      <span className="text-[8px] text-slate-400 font-mono">Uploading...</span>
+                    </div>
+                  ) : photoFront ? (
                     <img src={photoFront} alt="Front Specimen" className="w-full h-full object-contain rounded" />
                   ) : (
                     <span className="text-[10px] text-slate-500 font-bold block">Upload Front Image</span>
@@ -327,15 +395,19 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
                     id={`holding-back-file-${holding.id}`}
                     className="hidden"
                     accept="image/*"
+                    disabled={isUploadingBack}
                     onChange={(e) => {
                       if (e.target.files?.[0]) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => handleUpdateSpecimenPhotos(photoFront, ev.target?.result as string);
-                        reader.readAsDataURL(e.target.files[0]);
+                        handleBackPhotoFileChange(e.target.files[0]);
                       }
                     }}
                   />
-                  {photoBack ? (
+                  {isUploadingBack ? (
+                    <div className="flex flex-col items-center justify-center gap-1.5">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#FFCB05]" />
+                      <span className="text-[8px] text-slate-400 font-mono">Uploading...</span>
+                    </div>
+                  ) : photoBack ? (
                     <img src={photoBack} alt="Back Specimen" className="w-full h-full object-contain rounded" />
                   ) : (
                     <span className="text-[10px] text-slate-500 font-bold block">Upload Back Image</span>
@@ -369,7 +441,7 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
           {/* 1. Official Artwork Reference */}
           <div className="relative aspect-[3/4.1] bg-slate-950/60 border border-slate-850 rounded-xl overflow-hidden flex flex-col justify-end p-2 group shadow-sm">
             <img 
-              src={card.imageUrl} 
+              src={getOptimizedImageUrl(card.imageUrl, 400)} 
               alt="Official Art Reference" 
               className="absolute inset-0 w-full h-full object-contain p-1 rounded-lg transition-transform duration-300 hover:scale-[1.05]"
               referrerPolicy="no-referrer"

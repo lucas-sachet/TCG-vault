@@ -8,6 +8,7 @@ import { Search, SlidersHorizontal, ArrowUpDown, X, Tag, Plus, Grid, List, Layer
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CollectionItem, Binder } from '../types';
 import { CardItem } from './CardItem';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface CollectionTabProps {
   cards: Card[];
@@ -748,7 +749,7 @@ export const CollectionTab: React.FC<CollectionTabProps> = ({
                     >
                       <td className="p-3.5 pl-4 flex items-center gap-3">
                         <img 
-                          src={item.card.imageUrl} 
+                          src={getOptimizedImageUrl(item.card.imageUrl, 80)} 
                           alt={item.card.name} 
                           className="w-7 h-10 object-contain rounded bg-slate-950 border border-slate-800"
                         />

@@ -8,6 +8,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { CreditCard, Shield, Sparkles, FolderArchive, ArrowUpRight, ArrowDownRight, Camera } from 'lucide-react';
 import { Card, CollectionItem, WishlistItem } from '../types';
 import { LANGUAGE_METADATA, QUALITY_METADATA } from '../data/pokemonData';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 const getConditionStyle = (quality: string) => {
   switch (quality) {
@@ -122,7 +123,7 @@ export const CardItem: React.FC<CardItemProps> = ({
   // Specimen Visual status checks
   const hasPhotos = holdingsList.some(h => !!h.frontPhotoUrl || !!h.backPhotoUrl);
   const primarySpecimenPhoto = holdingsList.find(h => !!h.frontPhotoUrl)?.frontPhotoUrl || holdingsList.find(h => !!h.backPhotoUrl)?.backPhotoUrl;
-  const imgToRender = (preferSpecimenPhoto && primarySpecimenPhoto) ? primarySpecimenPhoto : card.imageUrl;
+  const imgToRender = (preferSpecimenPhoto && primarySpecimenPhoto) ? primarySpecimenPhoto : getOptimizedImageUrl(card.imageUrl, 260);
 
   const getRarityColor = (rarity: string) => {
     const r = rarity.toLowerCase();
