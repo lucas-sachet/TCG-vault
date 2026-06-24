@@ -267,7 +267,7 @@ export const WishlistTab: React.FC<WishlistTabProps> = ({
                     className="w-16 h-22 object-contain rounded bg-slate-950 border border-slate-800 cursor-pointer overflow-hidden relative group shrink-0 flex items-center justify-center p-1"
                   >
                     <img 
-                      src={getOptimizedImageUrl(card.imageUrl, 150)} 
+                      src={getOptimizedImageUrl(card.imageUrl, 220, 95)} 
                       alt={card.name} 
                       className="w-full h-full object-contain hover:scale-105 transition-transform"
                     />

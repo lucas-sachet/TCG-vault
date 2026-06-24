@@ -123,7 +123,7 @@ export const CardItem: React.FC<CardItemProps> = ({
   // Specimen Visual status checks
   const hasPhotos = holdingsList.some(h => !!h.frontPhotoUrl || !!h.backPhotoUrl);
   const primarySpecimenPhoto = holdingsList.find(h => !!h.frontPhotoUrl)?.frontPhotoUrl || holdingsList.find(h => !!h.backPhotoUrl)?.backPhotoUrl;
-  const imgToRender = (preferSpecimenPhoto && primarySpecimenPhoto) ? primarySpecimenPhoto : getOptimizedImageUrl(card.imageUrl, 260);
+  const imgToRender = (preferSpecimenPhoto && primarySpecimenPhoto) ? primarySpecimenPhoto : getOptimizedImageUrl(card.imageUrl, 380, 95);
 
   const getRarityColor = (rarity: string) => {
     const r = rarity.toLowerCase();

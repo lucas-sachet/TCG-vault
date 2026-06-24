@@ -502,7 +502,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                 )}
               </div>
               <img 
-                src={getOptimizedImageUrl(card.imageUrl, 100)} 
+                src={getOptimizedImageUrl(card.imageUrl, 180, 95)} 
                 alt={card.name} 
                 referrerPolicy="no-referrer"
                 className="w-8 h-11 object-contain bg-black/40 border border-slate-800 shrink-0 rounded"
@@ -552,7 +552,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
               className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg px-2 py-1 group"
             >
               <img 
-                src={getOptimizedImageUrl(card.imageUrl, 50)} 
+                src={getOptimizedImageUrl(card.imageUrl, 80, 95)} 
                 alt={card.name}
                 referrerPolicy="no-referrer"
                 className="w-4 h-5 object-contain rounded-sm"
@@ -670,7 +670,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                       <div className="flex items-center justify-between p-3 bg-slate-900/60 rounded-2xl border border-blue-500/40 shadow-lg shadow-blue-900/5 animate-fade-in">
                         <div className="flex items-center gap-3">
                           <img 
-                            src={getOptimizedImageUrl(selectedCatalogCard.imageUrl, 150)} 
+                            src={getOptimizedImageUrl(selectedCatalogCard.imageUrl, 260, 95)} 
                             alt={selectedCatalogCard.name} 
                             referrerPolicy="no-referrer"
                             className="w-12 h-16 object-contain rounded bg-black/40 border border-slate-800"
@@ -708,7 +708,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                                 className="w-full flex items-center justify-start gap-2.5 p-2 bg-slate-900/50 border border-slate-850 rounded-xl hover:border-blue-500/50 hover:bg-slate-850/60 text-left transition-all group cursor-pointer"
                               >
                                 <img 
-                                  src={getOptimizedImageUrl(card.imageUrl, 100)} 
+                                  src={getOptimizedImageUrl(card.imageUrl, 180, 95)} 
                                   alt={card.name} 
                                   referrerPolicy="no-referrer"
                                   className="w-9 h-12 object-contain bg-black/40 border border-slate-800 shrink-0 rounded"

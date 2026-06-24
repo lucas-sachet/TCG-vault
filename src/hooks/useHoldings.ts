@@ -93,6 +93,24 @@ export function useHoldings() {
     }));
   };
 
+  const updateHoldingPurchaseDetails = (
+    itemId: string,
+    updates: {
+      purchasePrice?: number;
+      purchaseDate?: string;
+      gradeType?: 'Raw' | 'PSA' | 'CGC' | 'BGS';
+      gradeValue?: string | number;
+      certNumber?: string;
+    }
+  ) => {
+    setCollectionItems(prev => prev.map(item => {
+      if (item.id === itemId) {
+        return { ...item, ...updates };
+      }
+      return item;
+    }));
+  };
+
   const resetHoldings = (type: 'seed' | 'empty') => {
     if (type === 'seed') {
       setCollectionItems(INITIAL_COLLECTION_ITEMS);
@@ -117,6 +135,7 @@ export function useHoldings() {
     updateHoldingNotes,
     updateHoldingQuality,
     updateHoldingPhotos,
+    updateHoldingPurchaseDetails,
     resetHoldings
   };
 }

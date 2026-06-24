@@ -73,6 +73,7 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
     updateHoldingNotes,
     updateHoldingQuality,
     updateHoldingPhotos,
+    updateHoldingPurchaseDetails,
     resetHoldings
   } = useHoldings();
 
@@ -256,6 +257,19 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
 
   const handleUpdateCollectionItemPhotos = (itemId: string, frontPhotoUrl?: string, backPhotoUrl?: string) => {
     updateHoldingPhotos(itemId, frontPhotoUrl, backPhotoUrl);
+  };
+
+  const handleUpdateCollectionItemPurchaseDetails = (
+    itemId: string,
+    updates: {
+      purchasePrice?: number;
+      purchaseDate?: string;
+      gradeType?: 'Raw' | 'PSA' | 'CGC' | 'BGS';
+      gradeValue?: string | number;
+      certNumber?: string;
+    }
+  ) => {
+    updateHoldingPurchaseDetails(itemId, updates);
   };
 
   const handleUpdatePriceAlert = (cardId: string, enabled: boolean, targetPrice: number) => {
@@ -635,6 +649,7 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
         onUpdatePriceAlert={handleUpdatePriceAlert}
         onUpdateCollectionItemQuality={handleUpdateCollectionItemQuality}
         onUpdateCollectionItemPhotos={handleUpdateCollectionItemPhotos}
+        onUpdateCollectionItemPurchaseDetails={handleUpdateCollectionItemPurchaseDetails}
       />
 
     </div>

@@ -96,7 +96,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ userEmail, o
       <div className="absolute bottom-[10%] right-[-10%] w-[50%] h-[45%] rounded-full bg-gradient-to-br from-[#3B4CCA]/10 to-[#FFCB05]/5 blur-[120px] pointer-events-none" />
 
       {/* Main Stepper Card Frame */}
-      <div className="w-full max-w-xl bg-[#0c0e14] border border-slate-850 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden z-20 flex flex-col justify-between min-h-[500px]">
+      <div className="w-full max-w-xl bg-[#0c0e14] border border-slate-850 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden z-20 flex flex-col justify-between h-[550px] sm:h-[520px]">
         {/* Dynamic header progress border accent */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-slate-800">
           <motion.div 
@@ -119,7 +119,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ userEmail, o
         </div>
 
         {/* Dynamic Main Body Content Router with framer motion animations */}
-        <div className="flex-grow flex flex-col justify-center py-4">
+        <div className="h-[380px] sm:h-[340px] overflow-y-auto pr-1 py-2 scrollbar-thin">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}

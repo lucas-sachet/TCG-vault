@@ -57,6 +57,16 @@ interface CardDetailsModalProps {
   onUpdatePriceAlert?: (cardId: string, enabled: boolean, targetPrice: number) => void;
   onUpdateCollectionItemQuality?: (itemId: string, quality: CardQuality) => void;
   onUpdateCollectionItemPhotos?: (itemId: string, frontPhotoUrl?: string, backPhotoUrl?: string) => void;
+  onUpdateCollectionItemPurchaseDetails?: (
+    itemId: string,
+    updates: {
+      purchasePrice?: number;
+      purchaseDate?: string;
+      gradeType?: 'Raw' | 'PSA' | 'CGC' | 'BGS';
+      gradeValue?: string | number;
+      certNumber?: string;
+    }
+  ) => void;
 }
 
 interface HoldingItemProps {
@@ -69,6 +79,16 @@ interface HoldingItemProps {
   onUpdateBinder: (id: string, binderId: string) => void;
   onUpdateQuality?: (id: string, quality: CardQuality) => void;
   onUpdatePhotos?: (itemId: string, frontPhotoUrl?: string, backPhotoUrl?: string) => void;
+  onUpdatePurchaseDetails?: (
+    itemId: string,
+    updates: {
+      purchasePrice?: number;
+      purchaseDate?: string;
+      gradeType?: 'Raw' | 'PSA' | 'CGC' | 'BGS';
+      gradeValue?: string | number;
+      certNumber?: string;
+    }
+  ) => void;
   currencySymbol: string;
   setConfirmModal?: (config: any) => void;
 }
@@ -83,6 +103,7 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
   onUpdateBinder,
   onUpdateQuality,
   onUpdatePhotos,
+  onUpdatePurchaseDetails,
   currencySymbol,
   setConfirmModal
 }) => {
@@ -95,8 +116,37 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
   const [isUploadingFront, setIsUploadingFront] = useState(false);
   const [isUploadingBack, setIsUploadingBack] = useState(false);
 
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editPrice, setEditPrice] = useState(holding.purchasePrice || 0);
+  const [editDate, setEditDate] = useState(holding.purchaseDate);
+  const [editGradeType, setEditGradeType] = useState(holding.gradeType || 'Raw');
+  const [editGradeValue, setEditGradeValue] = useState(holding.gradeValue || '10');
+  const [editCertNumber, setEditCertNumber] = useState(holding.certNumber || '');
+
+  // Reset/sync edit states if holding changes externally
+  useEffect(() => {
+    setEditPrice(holding.purchasePrice || 0);
+    setEditDate(holding.purchaseDate);
+    setEditGradeType(holding.gradeType || 'Raw');
+    setEditGradeValue(holding.gradeValue || '10');
+    setEditCertNumber(holding.certNumber || '');
+  }, [holding.purchasePrice, holding.purchaseDate, holding.gradeType, holding.gradeValue, holding.certNumber]);
+
+  const handleSaveDetails = () => {
+    if (onUpdatePurchaseDetails) {
+      onUpdatePurchaseDetails(holding.id, {
+        purchasePrice: holding.purchasePrice === 0 ? Number(editPrice) : holding.purchasePrice,
+        purchaseDate: editDate,
+        gradeType: editGradeType,
+        gradeValue: editGradeType === 'Raw' ? 'Raw' : (isNaN(Number(editGradeValue)) ? editGradeValue : Number(editGradeValue)),
+        certNumber: editCertNumber.trim() || undefined
+      });
+    }
+    setIsEditingDetails(false);
+  };
+
   // Sync state if holding photo URLs change externally
-  React.useEffect(() => {
+  useEffect(() => {
     setPhotoFront(holding.frontPhotoUrl || '');
     setPhotoBack(holding.backPhotoUrl || '');
   }, [holding.frontPhotoUrl, holding.backPhotoUrl]);
@@ -186,91 +236,202 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
           <span className="text-[10px] text-[#FFCB05] font-bold font-mono block uppercase">Holdings Copy Entry</span>
           <span className="text-xs text-slate-400 font-medium">Purchased on {holding.purchaseDate}</span>
         </div>
-        <button
-          onClick={() => {
-            if (setConfirmModal) {
-              setConfirmModal({
-                isOpen: true,
-                title: 'Remove Individual Copy?',
-                description: `Are you sure you want to delete this specific copy purchased on ${holding.purchaseDate} for ${currencySymbol}${holding.purchasePrice}? This action is irreversible.`,
-                confirmText: 'Yes, Delete Copy',
-                cancelText: 'Keep Copy',
-                type: 'danger',
-                onConfirm: () => onDelete(holding.id)
-              });
-            } else if (window.confirm('Are you sure you want to delete this copy?')) {
-              onDelete(holding.id);
-            }
-          }}
-          className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
-          title="Delete Copy"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Grid of properties (Purchase Price, Qty, Condition, Grade) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
-          <span className="text-[9px] text-slate-500 font-mono block uppercase">PURCHASE PRICE</span>
-          <span className="font-bold text-slate-200 mt-0.5 block font-mono">
-            {currencySymbol}{holding.purchasePrice.toLocaleString()}
-          </span>
-          <span className="text-[9px] text-slate-500 font-mono block">Cost: {currencySymbol}{holdingCost.toLocaleString()}</span>
-        </div>
-
-        <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
-          <span className="text-[9px] text-slate-500 font-mono block uppercase">QUANTITY</span>
-          <span className="font-bold text-slate-200 mt-0.5 block font-mono">
-            {holding.quantity}x
-          </span>
-          <span className="text-[9px] text-slate-500 font-mono block">Value: {currencySymbol}{holdingValue.toLocaleString()}</span>
-        </div>
-
-        <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
-          <span className="text-[9px] text-slate-500 font-mono block uppercase">CONDITION</span>
-          <span className="font-bold text-[#FFCB05] mt-0.5 block font-mono">
-            {holding.quality || 'NM'}
-          </span>
-          {onUpdateQuality ? (
-            <select
-              value={holding.quality || 'NM'}
-              onChange={(e) => onUpdateQuality(holding.id, e.target.value as CardQuality)}
-              className="w-full bg-slate-900 text-[10px] text-slate-300 border-none outline-none mt-1 p-0.5 rounded cursor-pointer"
+        <div className="flex items-center gap-1.5">
+          {!isEditingDetails && (
+            <button
+              type="button"
+              onClick={() => setIsEditingDetails(true)}
+              className="p-1.5 text-slate-500 hover:text-[#FFCB05] hover:bg-slate-850 rounded-lg transition-all cursor-pointer"
+              title="Edit Copy Details"
             >
-              <option value="M">M - Mint</option>
-              <option value="NM">NM - Near Mint</option>
-              <option value="SP">SP - Slightly Played</option>
-              <option value="MP">MP - Moderately Played</option>
-              <option value="HP">HP - Heavily Played</option>
-              <option value="D">D - Damaged</option>
-            </select>
-          ) : (
-            <span className="text-[9px] text-slate-500 block truncate">
-              {QUALITY_METADATA[holding.quality || 'NM']?.label || 'Near Mint'}
-            </span>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
           )}
-        </div>
-
-        <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
-          <span className="text-[9px] text-slate-500 font-mono block uppercase">SLAB GRADE</span>
-          <span className={`font-bold mt-0.5 block font-mono truncate ${holding.gradeType !== 'Raw' ? 'text-amber-500' : 'text-slate-400'}`}>
-            {holding.gradeType} {holding.gradeType !== 'Raw' ? holding.gradeValue : ''}
-          </span>
-          <span className="text-[9px] text-slate-500 block">
-            {holding.gradeType !== 'Raw' ? 'Graded Copy' : 'Raw Copy'}
-          </span>
+          <button
+            onClick={() => {
+              if (setConfirmModal) {
+                setConfirmModal({
+                  isOpen: true,
+                  title: 'Remove Individual Copy?',
+                  description: `Are you sure you want to delete this specific copy purchased on ${holding.purchaseDate} for ${currencySymbol}${holding.purchasePrice}? This action is irreversible.`,
+                  confirmText: 'Yes, Delete Copy',
+                  cancelText: 'Keep Copy',
+                  type: 'danger',
+                  onConfirm: () => onDelete(holding.id)
+                });
+              } else if (window.confirm('Are you sure you want to delete this copy?')) {
+                onDelete(holding.id);
+              }
+            }}
+            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all cursor-pointer"
+            title="Delete Copy"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
+
+      {/* Grid of properties or inline edit form */}
+      {!isEditingDetails ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs animate-fade-in">
+          <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
+            <span className="text-[9px] text-slate-500 font-mono block uppercase">PURCHASE PRICE</span>
+            <span className="font-bold text-slate-200 mt-0.5 block font-mono">
+              {currencySymbol}{holding.purchasePrice.toLocaleString()}
+            </span>
+            <span className="text-[9px] text-slate-500 font-mono block">Cost: {currencySymbol}{holdingCost.toLocaleString()}</span>
+          </div>
+
+          <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
+            <span className="text-[9px] text-slate-500 font-mono block uppercase">QUANTITY</span>
+            <span className="font-bold text-slate-200 mt-0.5 block font-mono">
+              {holding.quantity}x
+            </span>
+            <span className="text-[9px] text-slate-500 font-mono block">Value: {currencySymbol}{holdingValue.toLocaleString()}</span>
+          </div>
+
+          <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
+            <span className="text-[9px] text-slate-500 font-mono block uppercase">CONDITION</span>
+            <span className="font-bold text-[#FFCB05] mt-0.5 block font-mono">
+              {holding.quality || 'NM'}
+            </span>
+            {onUpdateQuality ? (
+              <select
+                value={holding.quality || 'NM'}
+                onChange={(e) => onUpdateQuality(holding.id, e.target.value as CardQuality)}
+                className="w-full bg-slate-900 text-[10px] text-slate-300 border-none outline-none mt-1 p-0.5 rounded cursor-pointer animate-fade-in"
+              >
+                <option value="M">M - Mint</option>
+                <option value="NM">NM - Near Mint</option>
+                <option value="SP">SP - Slightly Played</option>
+                <option value="MP">MP - Moderately Played</option>
+                <option value="HP">HP - Heavily Played</option>
+                <option value="D">D - Damaged</option>
+              </select>
+            ) : (
+              <span className="text-[9px] text-slate-500 block truncate">
+                {QUALITY_METADATA[holding.quality || 'NM']?.label || 'Near Mint'}
+              </span>
+            )}
+          </div>
+
+          <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-850">
+            <span className="text-[9px] text-slate-500 font-mono block uppercase">SLAB GRADE</span>
+            <span className={`font-bold mt-0.5 block font-mono truncate ${holding.gradeType !== 'Raw' ? 'text-amber-500' : 'text-slate-400'}`}>
+              {holding.gradeType} {holding.gradeType !== 'Raw' ? holding.gradeValue : ''}
+            </span>
+            <span className="text-[9px] text-slate-500 block">
+              {holding.gradeType !== 'Raw' ? 'Graded Copy' : 'Raw Copy'}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-3 bg-[#111317] border border-slate-850 rounded-xl space-y-3 animate-fade-in text-xs">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[9px] text-slate-450 font-mono block uppercase mb-1 font-bold">Purchase Date</label>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-2 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] text-[#FFCB05] font-mono block uppercase mb-1 font-bold">Purchase Price ({currencySymbol})</label>
+              {holding.purchasePrice === 0 ? (
+                <input
+                  type="number"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(Math.max(0, Number(e.target.value)))}
+                  className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-2 focus:outline-none focus:border-blue-500 font-mono"
+                  min="0"
+                />
+              ) : (
+                <div className="flex items-center justify-between bg-slate-900/50 border border-slate-850 rounded-lg p-2 text-slate-450 select-none cursor-not-allowed">
+                  <span className="font-mono">{currencySymbol}{holding.purchasePrice}</span>
+                  <span className="text-[8px] text-slate-500 font-mono uppercase tracking-wider font-bold flex items-center gap-1">
+                    <span>🔒 LOCKED</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div>
+              <label className="text-[9px] text-slate-450 font-mono block uppercase mb-1 font-bold">Grade Type</label>
+              <select
+                value={editGradeType}
+                onChange={(e) => setEditGradeType(e.target.value as any)}
+                className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-2 focus:outline-none cursor-pointer focus:border-blue-500"
+              >
+                <option value="Raw">Raw (Ungraded)</option>
+                <option value="PSA">PSA</option>
+                <option value="CGC">CGC</option>
+                <option value="BGS">BGS</option>
+              </select>
+            </div>
+            {editGradeType !== 'Raw' && (
+              <>
+                <div>
+                  <label className="text-[9px] text-slate-450 font-mono block uppercase mb-1 font-bold">Grade score</label>
+                  <input
+                    type="text"
+                    value={editGradeValue}
+                    onChange={(e) => setEditGradeValue(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-2 focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-450 font-mono block uppercase mb-1 font-bold">Cert Number</label>
+                  <input
+                    type="text"
+                    value={editCertNumber}
+                    onChange={(e) => setEditCertNumber(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-2 focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-900">
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingDetails(false);
+                setEditPrice(holding.purchasePrice);
+                setEditDate(holding.purchaseDate);
+                setEditGradeType(holding.gradeType || 'Raw');
+                setEditGradeValue(holding.gradeValue || '10');
+                setEditCertNumber(holding.certNumber || '');
+              }}
+              className="px-3.5 py-1.5 text-[10px] uppercase font-bold text-slate-400 hover:text-white bg-slate-900 rounded-lg border border-slate-850 hover:bg-slate-800 transition cursor-pointer select-none"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveDetails}
+              className="px-3.5 py-1.5 text-[10px] uppercase font-black text-slate-950 bg-[#FFCB05] hover:bg-yellow-400 rounded-lg transition cursor-pointer select-none"
+            >
+              Save Details
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Value Growth Row for this specific copy */}
-      <div className="flex justify-between items-center text-[11px] bg-slate-900/40 p-2 rounded-xl border border-slate-850">
-        <span className="text-slate-400 font-mono">Value Growth:</span>
-        <div className={`flex items-center gap-1 font-mono font-bold ${isHoldingProfit ? 'text-green-500' : 'text-red-500'}`}>
-          <span>{isHoldingProfit ? '+' : ''}{currencySymbol}{Math.round(holdingProfit).toLocaleString()}</span>
-          <span>({isHoldingProfit ? '+' : ''}{holdingRoi.toFixed(0)}%)</span>
+      {!isEditingDetails && (
+        <div className="flex justify-between items-center text-[11px] bg-slate-900/40 p-2 rounded-xl border border-slate-850">
+          <span className="text-slate-400 font-mono">Value Growth:</span>
+          <div className={`flex items-center gap-1 font-mono font-bold ${isHoldingProfit ? 'text-green-500' : 'text-red-500'}`}>
+            <span>{isHoldingProfit ? '+' : ''}{currencySymbol}{Math.round(holdingProfit).toLocaleString()}</span>
+            <span>({isHoldingProfit ? '+' : ''}{holdingRoi.toFixed(0)}%)</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Binder Selector & Notes edit container */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -441,7 +602,7 @@ const HoldingItem: React.FC<HoldingItemProps> = ({
           {/* 1. Official Artwork Reference */}
           <div className="relative aspect-[3/4.1] bg-slate-950/60 border border-slate-850 rounded-xl overflow-hidden flex flex-col justify-end p-2 group shadow-sm">
             <img 
-              src={getOptimizedImageUrl(card.imageUrl, 400)} 
+              src={getOptimizedImageUrl(card.imageUrl, 600, 95)} 
               alt="Official Art Reference" 
               className="absolute inset-0 w-full h-full object-contain p-1 rounded-lg transition-transform duration-300 hover:scale-[1.05]"
               referrerPolicy="no-referrer"
@@ -527,7 +688,8 @@ export const CardDetailsModal: React.FC<CardDetailsModalProps> = ({
   priceAlerts = {},
   onUpdatePriceAlert,
   onUpdateCollectionItemQuality,
-  onUpdateCollectionItemPhotos
+  onUpdateCollectionItemPhotos,
+  onUpdateCollectionItemPurchaseDetails
 }) => {
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteState, setNoteState] = useState('');
@@ -1487,6 +1649,7 @@ export const CardDetailsModal: React.FC<CardDetailsModalProps> = ({
                         onUpdateBinder={onUpdateCollectionItemBinder}
                         onUpdateQuality={onUpdateCollectionItemQuality}
                         onUpdatePhotos={onUpdateCollectionItemPhotos}
+                        onUpdatePurchaseDetails={onUpdateCollectionItemPurchaseDetails}
                         currencySymbol={currencySymbol}
                         setConfirmModal={setConfirmModal}
                       />

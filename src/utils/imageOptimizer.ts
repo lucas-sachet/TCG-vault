@@ -7,7 +7,7 @@
  * Optimizes an image URL using the free images.weserv.nl proxy CDN.
  * Only proxies external HTTP/HTTPS URLs (typically pokemontcg.io) to resize and output as WebP.
  */
-export function getOptimizedImageUrl(url: string, width?: number): string {
+export function getOptimizedImageUrl(url: string, width?: number, quality = 90): string {
   if (!url) return '';
   
   // Do not proxy base64, blob URLs, or already proxied URLs
@@ -23,7 +23,7 @@ export function getOptimizedImageUrl(url: string, width?: number): string {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     const cleanUrl = url.trim();
     const encodedUrl = encodeURIComponent(cleanUrl);
-    let proxyUrl = `https://images.weserv.nl/?url=${encodedUrl}&output=webp`;
+    let proxyUrl = `https://images.weserv.nl/?url=${encodedUrl}&output=webp&q=${quality}`;
     if (width) {
       proxyUrl += `&w=${width}`;
     }

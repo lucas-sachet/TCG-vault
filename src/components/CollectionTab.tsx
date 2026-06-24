@@ -749,7 +749,7 @@ export const CollectionTab: React.FC<CollectionTabProps> = ({
                     >
                       <td className="p-3.5 pl-4 flex items-center gap-3">
                         <img 
-                          src={getOptimizedImageUrl(item.card.imageUrl, 80)} 
+                          src={getOptimizedImageUrl(item.card.imageUrl, 120, 95)} 
                           alt={item.card.name} 
                           className="w-7 h-10 object-contain rounded bg-slate-950 border border-slate-800"
                         />
