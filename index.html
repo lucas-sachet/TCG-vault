@@ -2,11 +2,120 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>TCG Vault</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta name="color-scheme" content="dark" />
+        <meta name="theme-color" content="#1b202c" />
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+        <title>TCG Vault — Pokémon TCG Portfolio</title>
+        <meta
+            name="description"
+            content="Track card valuations, manage holdings, organize virtual binders, and plan collection goals for your Pokémon TCG portfolio."
+        />
+        <meta name="application-name" content="TCG Vault" />
+        <meta name="robots" content="index, follow" />
+        <meta name="format-detection" content="telephone=no" />
+
+        <link rel="canonical" href="%VITE_APP_URL%/" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="manifest" href="/site.webmanifest" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="TCG Vault" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:title" content="TCG Vault — Pokémon TCG Portfolio" />
+        <meta
+            property="og:description"
+            content="Track card valuations, manage holdings, organize virtual binders, and plan collection goals for your Pokémon TCG portfolio."
+        />
+        <meta property="og:url" content="%VITE_APP_URL%/" />
+
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="TCG Vault — Pokémon TCG Portfolio" />
+        <meta
+            name="twitter:description"
+            content="Track card valuations, manage holdings, organize virtual binders, and plan collection goals for your Pokémon TCG portfolio."
+        />
+
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="TCG Vault" />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+        <link rel="dns-prefetch" href="https://images.pokemontcg.io" />
+        <link rel="dns-prefetch" href="https://images.weserv.nl" />
+
+        <style>
+            :root {
+                color-scheme: dark;
+            }
+
+            html {
+                background-color: #0f1115;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100dvh;
+                background-color: #0f1115;
+                color: #f3f4f6;
+                font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            }
+
+            #root {
+                min-height: 100dvh;
+            }
+
+            .app-boot {
+                display: flex;
+                min-height: 100dvh;
+                align-items: center;
+                justify-content: center;
+                background-color: #0f1115;
+            }
+
+            .app-boot__spinner {
+                width: 2.5rem;
+                height: 2.5rem;
+                border: 3px solid #334155;
+                border-top-color: #ffcb05;
+                border-radius: 9999px;
+                animation: app-boot-spin 0.8s linear infinite;
+            }
+
+            @keyframes app-boot-spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
     </head>
     <body>
-        <div id="root"></div>
+        <div id="root">
+            <div class="app-boot" role="status" aria-live="polite" aria-label="Loading TCG Vault">
+                <div class="app-boot__spinner"></div>
+            </div>
+        </div>
+        <noscript>
+            <div
+                style="
+                    max-width: 32rem;
+                    margin: 4rem auto;
+                    padding: 0 1.5rem;
+                    text-align: center;
+                    font-family: Inter, system-ui, sans-serif;
+                    color: #f3f4f6;
+                "
+            >
+                <h1 style="font-size: 1.5rem; margin-bottom: 0.75rem">TCG Vault requires JavaScript</h1>
+                <p style="color: #94a3b8; line-height: 1.6">
+                    Enable JavaScript in your browser to track your Pokémon TCG collection, valuations, and binders.
+                </p>
+            </div>
+        </noscript>
         <script type="module" src="/src/main.tsx"></script>
     </body>
 </html>

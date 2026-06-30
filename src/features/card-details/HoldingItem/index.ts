@@ -1,0 +1,1 @@
+export { HoldingItem } from './HoldingItem';

@@ -46,6 +46,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={tab.id}
                 id={`tab-btn-${tab.id}`}
                 onClick={() => onChangeTab(tab.id)}
+                aria-label={tab.label}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex-1 h-full flex flex-col items-center justify-center transition-all duration-200 relative ${
                   isActive 
                     ? 'text-[#FFCB05] bg-slate-900/40 font-bold' 
@@ -97,6 +99,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={tab.id}
                 id={`sidebar-btn-${tab.id}`}
                 onClick={() => onChangeTab(tab.id)}
+                aria-label={tab.label}
+                aria-current={isActive ? 'page' : undefined}
                 className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
                   isActive
                     ? 'bg-slate-800/60 text-[#FFCB05] border-l-4 border-[#FFCB05] pl-3'

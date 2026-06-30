@@ -20,6 +20,7 @@ import {
 import { Card, CollectionItem, PriceSnapshot, Binder, CollectionGoal } from '../types';
 import { CardItem } from './CardItem';
 import { GoalsSection } from './GoalsSection';
+import { calculatePortfolioValue } from '../utils/valuation';
 
 interface DashboardTabProps {
   cards: Card[];
@@ -62,13 +63,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   // Financial calculations
   const totalCost = collectionItems.reduce((sum, item) => sum + (item.purchasePrice * item.quantity), 0);
-  const totalCurrentValue = collectionItems.reduce((sum, item) => {
-    const marketVal = marketPrices[item.cardId] || 0;
-    return sum + (marketVal * item.quantity);
-  }, 0);
+  const totalCurrentValue = calculatePortfolioValue(collectionItems, marketPrices);
 
   const profitLoss = totalCurrentValue - totalCost;
-  const totalROI = totalCost > 0 ? (profitLoss / totalCost) * 105 : 0; // standard simulated multiplier for premium feels
   const overallRolPercentage = totalCost > 0 ? (profitLoss / totalCost) * 100 : 0;
   const isProfit = profitLoss >= 0;
 

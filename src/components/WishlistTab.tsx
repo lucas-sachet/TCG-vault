@@ -20,6 +20,7 @@ import {
 import { Card, WishlistItem } from '../types';
 import { POKEMON_CARDS, LANGUAGE_METADATA } from '../data/pokemonData';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { VirtualWishlistList } from '../features/wishlist';
 
 interface WishlistTabProps {
   cards: Card[];
@@ -235,6 +236,39 @@ export const WishlistTab: React.FC<WishlistTabProps> = ({
             </button>
           </div>
         </div>
+      ) : wishlistItems.length > 50 ? (
+        <VirtualWishlistList
+          items={wishlistItems}
+          renderItem={(item) => {
+            const card = cards.find((catalogCard) => catalogCard.id === item.cardId);
+            if (!card) {
+              return null;
+            }
+
+            const currentPrice = marketPrices[item.cardId] || 0;
+            const isTargetMet = currentPrice <= item.desiredPrice;
+
+            return (
+              <div
+                id={`wish-block-${item.id}`}
+                className={`bg-[#1A1D24] border rounded-2xl p-4 mb-3 ${
+                  isTargetMet ? 'border-green-500/40' : 'border-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-100">{card.name}</h4>
+                    <p className="text-xs text-slate-500">{card.set}</p>
+                  </div>
+                  <div className="text-right font-mono text-xs">
+                    <div className="text-slate-400">Target {currencySymbol}{item.desiredPrice}</div>
+                    <div className="text-[#FFCB05]">Now {currencySymbol}{currentPrice}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+        />
       ) : (
         <div id="wishlist-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {wishlistItems.map((item) => {

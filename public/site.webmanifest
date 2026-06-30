@@ -1,0 +1,18 @@
+{
+  "name": "TCG Vault — Pokémon TCG Portfolio",
+  "short_name": "TCG Vault",
+  "description": "Track card valuations, manage holdings, and plan collection goals.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F1115",
+  "theme_color": "#1b202c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

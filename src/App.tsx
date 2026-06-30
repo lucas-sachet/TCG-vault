@@ -19,7 +19,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-import { Card, CollectionItem, CardQuality, WishlistItem, PriceSnapshot, Binder, PriceNotification, CollectionGoal } from './types';
+import { Card, CollectionItem, CardQuality, WishlistItem, PriceSnapshot, Binder, PriceNotification, CollectionGoal, CardLanguage } from './types';
 
 import { BottomNav, TabId } from './components/BottomNav';
 import { DashboardTab } from './components/DashboardTab';
@@ -34,6 +34,9 @@ import { CardDetailsModal } from './components/CardDetailsModal';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { services } from './services/serviceProvider';
+import {
+  mapOnboardingGoalToCollectionGoal,
+} from './utils/onboardingMappings';
 
 // Supabase client and sync services
 import { supabase } from './services/supabaseClient';
@@ -64,16 +67,24 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
   const {
     collectionItems,
     binders,
+    binderSlots,
     addHolding,
     deleteHolding,
     importHoldings,
     addBinder,
+    updateBinder,
     deleteBinder,
     updateHoldingBinder,
     updateHoldingNotes,
     updateHoldingQuality,
     updateHoldingPhotos,
     updateHoldingPurchaseDetails,
+    assignHoldingToSlot,
+    clearSlot,
+    moveHoldingBetweenSlots,
+    getSlotHoldingId,
+    getSlottedHoldingIds,
+    getBinderPageCount,
     resetHoldings
   } = useHoldings();
 
@@ -200,8 +211,11 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
     addHolding(newItem);
   };
 
-  const handleBulkCardAdded = (newCards: Card[], newItems: CollectionItem[]) => {
-    importCards(newCards);
+  const handleBulkCardAdded = async (newCards: Card[], newItems: CollectionItem[]) => {
+    const cardsSaved = await importCards(newCards);
+    if (!cardsSaved) {
+      return;
+    }
     importHoldings(newItems);
     importMarketPricesAndHistories(newItems);
   };
@@ -229,14 +243,21 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
     acquireWishlistItem(wishId, purchasePrice, purchaseDate, gradeType, gradeValue, certNumber);
   };
 
-  const handleCSVImportCollection = (importedItems: CollectionItem[], importedCards: Card[]) => {
-    importCards(importedCards);
+  const handleCSVImportCollection = async (importedItems: CollectionItem[], importedCards: Card[]) => {
+    const cardsSaved = await importCards(importedCards);
+    if (!cardsSaved) {
+      return;
+    }
     importHoldings(importedItems);
     importMarketPricesAndHistories(importedItems);
   };
 
   const handleAddBinder = (name: string, description?: string) => {
-    addBinder(name, description);
+    return addBinder(name, description);
+  };
+
+  const handleViewHolding = (_holdingId: string, cardId: string) => {
+    setSelectedCardIdDetails(cardId);
   };
 
   const handleDeleteBinder = (binderId: string) => {
@@ -298,28 +319,19 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
       <OnboardingWizard
         userEmail={userEmail}
         onComplete={async (collectionName, selectedLanguages, selectedGoals) => {
-          // Establish primary vault custom binder
           const cleanName = collectionName.trim() || 'My Collection';
           const newBinderId = addBinder(cleanName, `Primary binder established during onboarding setup.`);
-          
-          // Switch tab selected binder focus
+
           setSelectedBinderId(newBinderId);
 
-          // Save selected preferences
           services.settings.setLanguages(selectedLanguages);
           services.settings.setOnboarded(true);
 
-          // Establish primary goals
-          const newGoals: CollectionGoal[] = selectedGoals.map((g, idx) => ({
-            id: `goal-${Date.now()}-${idx}`,
-            name: g === 'pokemon' ? 'Pikachu Collector' : g === 'set' ? 'Complete 151 Classic' : 'Reach Value Milestone',
-            type: g as any,
-            targetValue: g === 'pokemon' ? 'Pikachu' : g === 'set' ? '151 Classic Collection (Kanto)' : '1000',
-            createdAt: new Date().toISOString()
-          }));
+          const newGoals: CollectionGoal[] = selectedGoals.map((goalKey, index) =>
+            mapOnboardingGoalToCollectionGoal(goalKey, index),
+          );
           await services.goals.saveGoals(newGoals);
 
-          // Set collection as empty for pristine new space
           resetCollection('empty');
           resetHoldings('empty');
 
@@ -523,15 +535,26 @@ function MainVaultApp({ userEmail, handleSignOut, handleDeleteAccount }: MainVau
             cards={cards}
             collectionItems={collectionItems}
             marketPrices={marketPrices}
-            selectedBinderId={selectedBinderId}
-            onViewCardDetails={setSelectedCardIdDetails}
+            binders={binders}
+            binderSlots={binderSlots}
+            selectedBinderId={selectedBinderId === 'binder-all' ? null : selectedBinderId}
+            onSelectBinder={(binderId) => {
+              if (binderId !== null) {
+                setSelectedBinderId(binderId);
+              }
+            }}
+            onAddBinder={handleAddBinder}
+            onUpdateBinder={updateBinder}
+            onDeleteBinder={handleDeleteBinder}
+            onViewHolding={handleViewHolding}
             onOpenAddModal={() => setIsAddCardOpen(true)}
             currencySymbol={currencySymbol}
-            preferSpecimenPhoto={preferSpecimenPhoto}
-            onResetCollection={handleResetCollection}
-            onGoToSettings={() => setActiveTab('settings')}
-            binders={binders}
-            onSelectBinder={setSelectedBinderId}
+            getSlotHoldingId={getSlotHoldingId}
+            getSlottedHoldingIds={getSlottedHoldingIds}
+            getBinderPageCount={getBinderPageCount}
+            assignHoldingToSlot={assignHoldingToSlot}
+            clearSlot={clearSlot}
+            moveHoldingBetweenSlots={moveHoldingBetweenSlots}
           />
         )}
 
@@ -702,12 +725,12 @@ export default function App() {
 
   // Redirect unauthenticated users navigating to /app back to /
   useEffect(() => {
-    if (!userEmail && currentPath === '/app') {
+    if (!session?.user && currentPath === '/app') {
       window.history.replaceState({}, '', '/');
       setCurrentPath('/');
       setShouldShowAuthModal(true);
     }
-  }, [userEmail, currentPath]);
+  }, [session, currentPath]);
 
   // Sync caches when userEmail / session is set
   useEffect(() => {
@@ -742,7 +765,7 @@ export default function App() {
   const showApp = currentPath === '/app';
 
   if (showApp) {
-    if (!userEmail) {
+    if (!session?.user?.email) {
       return null;
     }
 
@@ -757,7 +780,7 @@ export default function App() {
 
     return (
       <MainVaultApp
-        userEmail={userEmail}
+        userEmail={session.user.email}
         handleSignOut={handleSignOut}
         handleDeleteAccount={handleDeleteAccount}
       />

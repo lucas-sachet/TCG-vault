@@ -75,7 +75,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
     });
 
     return Object.entries(map).map(([lang, value]) => {
-      const metadata = LANGUAGE_METADATA[lang as any] || { flag: '🌐', label: lang };
+      const metadata = LANGUAGE_METADATA[lang as keyof typeof LANGUAGE_METADATA] || { flag: '🌐', label: lang };
       const percentage = totalCurrentValue > 0 ? (value / totalCurrentValue) * 100 : 0;
       return { lang, value, percentage, flag: metadata.flag, label: metadata.label };
     }).sort((a,b) => b.value - a.value);
@@ -181,7 +181,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
   }, [languageAllocations]);
 
   // Fastest Growing Card calculation based on ROI
-  const fastestGrowingCard = React.useMemo(() => {
+  const fastestGrowingCard = React.useMemo((): { card: Card; percent: number; isFallback: boolean } | null => {
     if (collectionItems.length === 0) return null;
     let bestItem: CollectionItem | null = null;
     let bestCard: Card | null = null;
@@ -261,7 +261,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
         item.cardId,
         `"${card.name.replace(/"/g, '""')}"`,
         `"${card.set.replace(/"/g, '""')}"`,
-        item.card.supertype === 'Trainer' ? 'Trainer' : item.card.number,
+        card.supertype === 'Trainer' ? 'Trainer' : card.number,
         `"${card.rarity.replace(/"/g, '""')}"`,
         card.language,
         item.purchaseDate,

@@ -34,6 +34,55 @@ export interface TcgApiCard {
 
 import { services } from './serviceProvider';
 
+function extractMarketPriceFromTcgCard(item: TcgApiCard): number {
+  return (
+    item.tcgplayer?.prices?.holofoil?.market
+    || item.tcgplayer?.prices?.reverseHolofoil?.market
+    || item.tcgplayer?.prices?.normal?.market
+    || item.tcgplayer?.prices?.normal?.mid
+    || item.tcgplayer?.prices?.holofoil?.mid
+    || 0
+  );
+}
+
+export async function fetchMarketPricesForCardIds(
+  cardIds: string[],
+): Promise<Record<string, number>> {
+  const uniqueCardIds = [...new Set(cardIds.filter(Boolean))];
+  if (uniqueCardIds.length === 0) {
+    return {};
+  }
+
+  const marketPrices: Record<string, number> = {};
+  const batchSize = 20;
+
+  for (let batchStart = 0; batchStart < uniqueCardIds.length; batchStart += batchSize) {
+    const cardIdBatch = uniqueCardIds.slice(batchStart, batchStart + batchSize);
+    const query = cardIdBatch.map((cardId) => `id:${cardId}`).join(' OR ');
+    const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&pageSize=${batchSize}`;
+
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pokemon TCG API responded with status ${response.status}`);
+    }
+
+    const json = await response.json();
+    const data: TcgApiCard[] = json.data || [];
+
+    data.forEach((item) => {
+      const priceValue = extractMarketPriceFromTcgCard(item);
+      if (priceValue > 0) {
+        marketPrices[item.id] = priceValue;
+      }
+    });
+  }
+
+  return marketPrices;
+}
+
 export async function searchPokemonCardsBySet(setName: string): Promise<Card[]> {
   const cleanSet = setName.trim().replace(/[\"']/g, '');
   if (!cleanSet) return [];
@@ -95,7 +144,7 @@ export async function searchPokemonCardsBySet(setName: string): Promise<Card[]> 
     if (Object.keys(pricesToSave).length > 0) {
       const currentPrices = services.prices.getMarketPrices();
       const updatedPrices = { ...currentPrices, ...pricesToSave };
-      services.prices.saveMarketPrices(updatedPrices);
+      services.prices.setMarketPrices(updatedPrices);
     }
 
     page++;
@@ -179,7 +228,7 @@ export async function searchPokemonCards(filters: {
     if (Object.keys(pricesToSave).length > 0) {
       const currentPrices = services.prices.getMarketPrices();
       const updatedPrices = { ...currentPrices, ...pricesToSave };
-      services.prices.saveMarketPrices(updatedPrices);
+      services.prices.setMarketPrices(updatedPrices);
     }
 
     return results;

@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Card, CollectionItem, WishlistItem, PriceSnapshot, Binder, PriceNotification, CollectionGoal } from '../types';
+import { Card, CollectionItem, WishlistItem, PriceSnapshot, Binder, BinderSlot, PriceNotification, CollectionGoal } from '../types';
 
 export interface ICardService {
   getCards(): Card[];
-  saveCards(cards: Card[]): void;
+  setCards(cards: Card[]): void;
+  saveCards(cards: Card[]): Promise<boolean>;
 }
 
 export interface IHoldingService {
   getHoldings(): CollectionItem[];
-  saveHoldings(holdings: CollectionItem[]): void;
+  setHoldings(holdings: CollectionItem[]): void;
+  saveHoldings(holdings: CollectionItem[]): Promise<boolean>;
 }
 
 export interface IWishlistService {
@@ -22,15 +24,31 @@ export interface IWishlistService {
 
 export interface IBinderService {
   getBinders(): Binder[];
-  saveBinders(binders: Binder[]): void;
+  setBinders(binders: Binder[]): void;
+  saveBinders(binders: Binder[]): Promise<boolean>;
+}
+
+export interface IBinderSlotService {
+  getBinderSlots(): BinderSlot[];
+  setBinderSlots(slots: BinderSlot[]): void;
+  saveBinderSlots(slots: BinderSlot[]): Promise<boolean>;
+  createSlotRecord(
+    binderId: string,
+    pageNumber: number,
+    slotNumber: number,
+    collectionItemId: string | null,
+  ): BinderSlot;
 }
 
 export interface IPriceService {
   getMarketPrices(): Record<string, number>;
-  saveMarketPrices(prices: Record<string, number>): void;
+  setMarketPrices(prices: Record<string, number>): void;
+  saveMarketPrices(prices: Record<string, number>): Promise<boolean>;
+  syncMarketPricesForCardIds(cardIds: string[]): Promise<boolean>;
 
   getPriceHistories(): Record<string, PriceSnapshot[]>;
-  savePriceHistories(histories: Record<string, PriceSnapshot[]>): void;
+  setPriceHistories(histories: Record<string, PriceSnapshot[]>): void;
+  savePriceHistories(histories: Record<string, PriceSnapshot[]>): Promise<boolean>;
 
   getNotifications(): PriceNotification[];
   saveNotifications(notifications: PriceNotification[]): void;

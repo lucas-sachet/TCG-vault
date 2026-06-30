@@ -202,6 +202,30 @@
 }
 
 /* Standards-compliant scrollbar fallback styling for Firefox & CSS Standards UI */
+@media (hover: hover) {
+  .binder-pocket:hover .binder-pocket-image {
+    transform: perspective(600px) rotateY(4deg) rotateX(-2deg) scale(1.03);
+    transition: transform 200ms ease;
+  }
+
+  .binder-pocket-sheen {
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(147, 130, 255, 0.12) 35%,
+      transparent 70%
+    );
+  }
+
+  .binder-pocket:hover .binder-pocket-sheen {
+    opacity: 1;
+  }
+}
+
+.binder-pocket-image {
+  transition: transform 200ms ease;
+}
+
 @supports (scrollbar-width: thin) {
   * {
     scrollbar-width: thin;

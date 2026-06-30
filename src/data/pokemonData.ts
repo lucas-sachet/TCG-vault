@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Card, CollectionItem, WishlistItem, PriceSnapshot } from '../types';
+import { Card, CollectionItem, WishlistItem, PriceSnapshot, Binder } from '../types';
 
 // Complying with: "Remove all mock card data"
 // Resetting default cards, collections, prices and histories to empty states.
@@ -17,11 +17,7 @@ export const CURRENT_MARKET_PRICES: Record<string, number> = {};
 
 export const CARD_PRICE_HISTORIES: Record<string, PriceSnapshot[]> = {};
 
-export const INITIAL_BINDERS = [
-  { id: 'binder-all', name: 'Main Vault', description: 'Primary master collection binder', createdAt: '2026-06-15' },
-  { id: 'binder-1', name: 'Expansions', description: 'Recent set lists and art rarities', createdAt: '2026-06-15' },
-  { id: 'binder-2', name: 'Investment Grade', description: 'Graded specimens and sealed-like singletons', createdAt: '2026-06-15' }
-];
+export const INITIAL_BINDERS: Binder[] = [];
 
 export const SET_METADATA: Record<string, { year: string; iconBg: string }> = {
   'Obsidian Flames': { year: '2023', iconBg: 'from-orange-600 to-red-800' },

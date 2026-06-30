@@ -1,0 +1,15 @@
+@import '../src/index.css';
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background-color: #0f1115;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: #0f1115;
+  color: #f3f4f6;
+}

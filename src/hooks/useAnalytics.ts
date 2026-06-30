@@ -3,55 +3,71 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
-import { CollectionGoal, CollectionItem, Card } from '../types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { CollectionGoal, CollectionItem } from '../types';
 import { services } from '../services/serviceProvider';
+import { calculatePortfolioValue } from '../utils/valuation';
+
+const GOALS_QUERY_KEY = ['collection', 'goals'] as const;
 
 export function useAnalytics() {
-  const [goals, setGoals] = useState<CollectionGoal[]>(() => services.goals.getGoals());
+  const queryClient = useQueryClient();
 
-  // Persistent syncing to goals service
-  useEffect(() => {
-    services.goals.saveGoals(goals);
-  }, [goals]);
+  const { data: goals = [] } = useQuery({
+    queryKey: GOALS_QUERY_KEY,
+    queryFn: () => services.goals.getGoals(),
+    initialData: () => services.goals.getGoals(),
+    staleTime: Infinity,
+  });
+
+  async function persistGoals(nextGoals: CollectionGoal[]) {
+    queryClient.setQueryData(GOALS_QUERY_KEY, nextGoals);
+    await services.goals.saveGoals(nextGoals);
+  }
 
   const addGoal = (goalData: Omit<CollectionGoal, 'id' | 'createdAt'>) => {
     const newGoal: CollectionGoal = {
       ...goalData,
       id: `goal-${Date.now()}`,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
-    setGoals(prev => [newGoal, ...prev]);
+    void persistGoals([newGoal, ...goals]);
   };
 
   const deleteGoal = (goalId: string) => {
-    setGoals(prev => prev.filter(g => g.id !== goalId));
+    void persistGoals(goals.filter((goal) => goal.id !== goalId));
   };
 
-  // Portfolio aggregates helpers for deep analytics tracking
-  const calculateTotalValue = (items: CollectionItem[], marketPrices: Record<string, number>): number => {
-    return items.reduce((sum, item) => {
-      const price = marketPrices[item.cardId] || 0;
-      return sum + (price * (item.quantity || 1));
-    }, 0);
-  };
+  const calculateTotalValue = (
+    items: CollectionItem[],
+    marketPrices: Record<string, number>,
+  ): number => calculatePortfolioValue(items, marketPrices);
 
   const calculateTotalCost = (items: CollectionItem[]): number => {
-    return items.reduce((sum, item) => {
-      return sum + (item.purchasePrice * (item.quantity || 1));
-    }, 0);
+    return items.reduce((sum, item) => sum + item.purchasePrice * (item.quantity || 1), 0);
   };
 
-  const calculateProfitLoss = (items: CollectionItem[], marketPrices: Record<string, number>) => {
+  const calculateProfitLoss = (
+    items: CollectionItem[],
+    marketPrices: Record<string, number>,
+  ) => {
     const totalCost = calculateTotalCost(items);
     const totalValue = calculateTotalValue(items, marketPrices);
     const absolute = totalValue - totalCost;
     const percentage = totalCost > 0 ? (absolute / totalCost) * 100 : 0;
+
     return {
       absolute,
       percentage,
-      isProfit: absolute >= 0
+      isProfit: absolute >= 0,
     };
+  };
+
+  const setGoals = (
+    updater: CollectionGoal[] | ((previousGoals: CollectionGoal[]) => CollectionGoal[]),
+  ) => {
+    const nextGoals = typeof updater === 'function' ? updater(goals) : updater;
+    void persistGoals(nextGoals);
   };
 
   return {
@@ -61,6 +77,6 @@ export function useAnalytics() {
     deleteGoal,
     calculateTotalValue,
     calculateTotalCost,
-    calculateProfitLoss
+    calculateProfitLoss,
   };
 }

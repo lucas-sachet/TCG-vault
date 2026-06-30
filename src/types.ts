@@ -58,6 +58,15 @@ export interface Binder {
   description?: string;
   coverCardId?: string;
   createdAt: string;
+  isDefault?: boolean;
+}
+
+export interface BinderSlot {
+  id: string;
+  binderId: string;
+  pageNumber: number;
+  slotNumber: number;
+  collectionItemId: string | null;
 }
 
 export interface PriceNotification {

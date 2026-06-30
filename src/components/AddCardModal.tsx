@@ -3,15 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Sparkles, AlertCircle, Info, Calendar, DollarSign, Check, Camera, Search, Loader2, Layers, Package, Trash2, CheckSquare, Square, ShoppingCart, Zap, LayoutGrid } from 'lucide-react';
-import { Card, CollectionItem, CardQuality } from '../types';
+import { Card, CollectionItem, CardQuality, Binder } from '../types';
 import { LANGUAGE_METADATA } from '../data/pokemonData';
-import { searchPokemonCards, searchPokemonCardsBySet } from '../services/pokemonTcg.service';
+import { searchPokemonCardsBySet } from '../services/pokemonTcg.service';
+import { searchCardsFromApi } from '../services/api/cardSearch';
+import { services } from '../services/serviceProvider';
+import { useDebounce } from '../hooks/useDebounce';
 import { supabase } from '../services/supabaseClient';
 import { uploadImageIfBase64 } from '../services/imageUpload.service';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { findDefaultBinder, resolveBinderId } from '../constants/defaultBinder';
 
 /* ── Personal Photo Uploader (unchanged from original) ────────────── */
 
@@ -153,7 +157,7 @@ interface AddCardModalProps {
   onClose: () => void;
   onCardAdded: (card: Card, item: CollectionItem) => void;
   onBulkAdd: (cards: Card[], items: CollectionItem[]) => void;
-  binders: { id: string; name: string }[];
+  binders: Binder[];
   marketPrices: Record<string, number>;
 }
 
@@ -171,6 +175,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   // ─── Shared search state ───
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<'name' | 'set' | 'number'>('name');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [apiResults, setApiResults] = useState<Card[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
   const [apiSearchError, setApiSearchError] = useState<string | null>(null);
@@ -205,6 +210,21 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   const [isSearchingSet, setIsSearchingSet] = useState(false);
   const [setImportError, setSetImportError] = useState<string | null>(null);
   const [setLoadedName, setSetLoadedName] = useState('');
+
+  const defaultBinder = findDefaultBinder(binders);
+  const defaultBinderId = defaultBinder?.id ?? '';
+
+  useEffect(() => {
+    if (!isOpen || !defaultBinderId) {
+      return;
+    }
+    setSelectedBinderId((current) =>
+      current === 'binder-all' || current === '' ? defaultBinderId : current,
+    );
+    setBulkBinderId((current) =>
+      current === 'binder-all' || current === '' ? defaultBinderId : current,
+    );
+  }, [isOpen, defaultBinderId]);
 
   // ─── Helpers ───
   const isBulkSelected = useCallback((cardId: string) => {
@@ -252,18 +272,65 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
       else if (searchCategory === 'set') filters.set = query;
       else if (searchCategory === 'number') filters.number = query;
       
-      const results = await searchPokemonCards(filters);
+      const { cards: results, prices } = await searchCardsFromApi(filters);
+      if (Object.keys(prices).length > 0) {
+        const currentPrices = services.prices.getMarketPrices();
+        services.prices.setMarketPrices({ ...currentPrices, ...prices });
+      }
       setApiResults(results);
       if (results.length === 0) {
         setApiSearchError('No matching cards found. Try another search term.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setApiSearchError('Failed to fetch from Pokémon TCG API. Check your internet connection.');
     } finally {
       setIsSearchingApi(false);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen || searchCategory !== 'name') {
+      return;
+    }
+
+    const query = debouncedSearchQuery.trim();
+    if (query.length < 3) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function runDebouncedSearch() {
+      setIsSearchingApi(true);
+      setApiSearchError(null);
+      try {
+        const { cards: results, prices } = await searchCardsFromApi({ name: query });
+        if (isCancelled) {
+          return;
+        }
+        if (Object.keys(prices).length > 0) {
+          const currentPrices = services.prices.getMarketPrices();
+          services.prices.setMarketPrices({ ...currentPrices, ...prices });
+        }
+        setApiResults(results);
+      } catch {
+        if (!isCancelled) {
+          setApiSearchError('Failed to fetch from Pokémon TCG API.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSearchingApi(false);
+        }
+      }
+    }
+
+    void runDebouncedSearch();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [debouncedSearchQuery, isOpen, searchCategory]);
 
   // ─── Set Import Search ───
   const handleSetSearch = async (e?: React.FormEvent) => {
@@ -329,7 +396,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
         gradeType: gradeType,
         gradeValue: gradeType === 'Raw' ? 'Raw' : (isNaN(Number(gradeValue)) ? gradeValue : Number(gradeValue)),
         certNumber: certNumber.trim() || undefined,
-        binderId: selectedBinderId === 'binder-all' ? undefined : selectedBinderId,
+        binderId: resolveBinderId(selectedBinderId, binders),
         quality: quality,
         frontPhotoUrl: uploadedFrontUrl.trim() || undefined,
         backPhotoUrl: uploadedBackUrl.trim() || undefined
@@ -370,7 +437,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
       quantity: 1,
       gradeType: 'Raw' as const,
       gradeValue: 'Raw',
-      binderId: bulkBinderId === 'binder-all' ? undefined : bulkBinderId,
+      binderId: resolveBinderId(bulkBinderId, binders),
       quality: bulkQuality,
     }));
 
@@ -882,8 +949,10 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                         onChange={(e) => setSelectedBinderId(e.target.value)}
                         className="w-full bg-[#1A1D24] text-xs border border-slate-800 text-slate-200 rounded-xl p-2.5 focus:outline-none"
                       >
-                        <option value="binder-all">Default Main Binder</option>
-                        {binders.filter(b => b.id !== 'binder-all').map(binder => (
+                        {defaultBinder && (
+                          <option value={defaultBinder.id}>{defaultBinder.name} (Default)</option>
+                        )}
+                        {binders.filter((binder) => !binder.isDefault).map((binder) => (
                           <option key={binder.id} value={binder.id}>{binder.name}</option>
                         ))}
                       </select>
@@ -1081,8 +1150,10 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                             onChange={(e) => setBulkBinderId(e.target.value)}
                             className="w-full bg-[#1A1D24] text-xs border border-slate-800 text-slate-200 rounded-xl p-2.5 focus:outline-none"
                           >
-                            <option value="binder-all">Default Main Binder</option>
-                            {binders.filter(b => b.id !== 'binder-all').map(binder => (
+                            {defaultBinder && (
+                              <option value={defaultBinder.id}>{defaultBinder.name} (Default)</option>
+                            )}
+                            {binders.filter((binder) => !binder.isDefault).map((binder) => (
                               <option key={binder.id} value={binder.id}>{binder.name}</option>
                             ))}
                           </select>
